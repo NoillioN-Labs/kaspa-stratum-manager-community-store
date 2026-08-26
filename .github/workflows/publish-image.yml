@@ -1,0 +1,60 @@
+name: Publish milestone image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-image.yml"
+      - "kaspa-stratum-manager/Dockerfile"
+      - "kaspa-stratum-manager/app/**"
+      - "kaspa-stratum-manager/build/**"
+      - "kaspa-stratum-manager/config/**"
+      - "kaspa-stratum-manager/docker/**"
+      - "kaspa-stratum-manager/public/**"
+      - "kaspa-stratum-manager/scripts/**"
+      - "kaspa-stratum-manager/server/**"
+      - "kaspa-stratum-manager/worker/**"
+      - "kaspa-stratum-manager/package.json"
+      - "kaspa-stratum-manager/package-lock.json"
+      - "kaspa-stratum-manager/next.config.ts"
+      - "kaspa-stratum-manager/tsconfig.json"
+      - "kaspa-stratum-manager/vite.config.ts"
+
+env:
+  IMAGE: ghcr.io/noillion-labs/kaspa-stratum-manager
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out milestone source
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish linux/amd64 image
+        id: build
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: ./kaspa-stratum-manager
+          file: ./kaspa-stratum-manager/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:0.2.4
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Record immutable digest
+        run: echo "${{ env.IMAGE }}:0.2.4@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
