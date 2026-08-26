@@ -10,7 +10,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kaspa-stratum-manager:0.2.0
     command: ["npm", "run", "start", "--", "--hostname", "0.0.0.0", "--port", "8080"]
     restart: on-failure
     stop_grace_period: 30s
@@ -28,7 +27,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kaspa-stratum-manager:0.2.0
     command: ["node", "server/manager.mjs"]
     restart: on-failure
     stop_grace_period: 30s

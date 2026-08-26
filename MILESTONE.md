@@ -1,4 +1,4 @@
-# Kaspa Stratum Manager 0.2.0 milestone
+# Kaspa Stratum Manager 0.2.1 milestone
 
 This public snapshot was exported from validated private-development commit
 `4a9d377622d787efd85c1e904562e39ea5cf0ac1` on 26 August 2026.
@@ -15,3 +15,7 @@ Windows Docker validation passed for the production `linux/amd64` image:
 
 The remaining milestone is installation through Umbrel's Community App Store
 loader, app-data persistence validation and an accepted-share ASIC test.
+
+Version 0.2.1 removes local-only image names from the Compose services. Umbrel
+pulls images before running local builds; without this packaging fix it tried to
+download a nonexistent image and stopped at the start of installation.

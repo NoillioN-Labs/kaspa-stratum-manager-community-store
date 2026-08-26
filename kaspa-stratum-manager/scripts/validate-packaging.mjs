@@ -20,6 +20,7 @@ assert.match(dockerfile, /find scripts docker -type f -name '\*\.sh' -exec sed -
 assert.match(dockerfile, /COPY --from=app-build \/app\/docker\/entrypoint\.sh/);
 assert.match(compose, /BRIDGE_COMMAND: \/usr\/local\/bin\/stratum-bridge/);
 assert.match(compose, /"5555:5555\/tcp"/);
+assert.doesNotMatch(compose, /^\s+image: kaspa-stratum-manager:/m);
 assert.match(config, /stratum_port: ":5555"/);
 assert.match(config, /kaspad_address: "host\.docker\.internal:16110"/);
 assert.match(route, /MANAGER_INTERNAL_URL/);
