@@ -40,3 +40,7 @@ Version 0.2.5 replaces on-device source builds with the public linux/amd64 image
 `ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.4`, pinned to immutable digest
 `sha256:0f1de9f237891c5dcc37187f805b5bf083f354d9a3e89748570b4e01b0916b4c`. GitHub Actions built the image from this public snapshot,
 and anonymous registry access was verified before the Umbrel package changed.
+
+The physical Umbrel then updated successfully through its normal App Store
+workflow. The application remained healthy, the stopped state displayed Start,
+and Start returned the managed bridge to a healthy running state.
