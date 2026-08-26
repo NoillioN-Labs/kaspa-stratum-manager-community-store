@@ -1,0 +1,11 @@
+.git
+.github
+.next
+.wrangler
+dist
+node_modules
+.env
+.env.*
+!.env.example
+npm-debug.log*
+upload

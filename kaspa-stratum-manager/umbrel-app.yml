@@ -1,0 +1,23 @@
+manifestVersion: 1.1
+id: kaspa-stratum-manager
+category: bitcoin
+name: Kaspa Stratum Manager
+version: "0.2.0"
+tagline: Manage Kaspa solo mining from Umbrel
+description: >-
+  A local-first management interface for the Rusty Kaspa Stratum Bridge.
+  Connect ASIC miners to the Rusty Kaspad node already running on umbrelOS.
+developer: NoillioN Labs
+dependencies: [rusty-kaspad]
+repo: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/issues
+port: 5556
+gallery: []
+releaseNotes: >-
+  Adds the pinned official Rusty Kaspa v2.0.1 Stratum Bridge, persistent bridge
+  configuration, same-origin management routing and an Umbrel container build.
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: Nathan Oldaker
+submission: ""
