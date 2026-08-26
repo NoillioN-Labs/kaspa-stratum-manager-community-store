@@ -13,8 +13,11 @@ Windows Docker validation passed for the production `linux/amd64` image:
 - manager stop, start and restart controls passed; and
 - live node/bridge data and honest zero-miner states rendered correctly.
 
-The remaining milestone is installation through Umbrel's Community App Store
-loader, app-data persistence validation and an accepted-share ASIC test.
+Physical x86_64 Umbrel installation now succeeds through the Community App
+Store loader. The production GUI, existing Rusty Kaspad v2.0.1 node, managed
+bridge, bridge API, Umbrel runtime profile and honest zero-miner state are
+healthy. Lifecycle controls, app-data persistence, LAN Stratum reachability and
+an accepted-share ASIC test remain pending.
 
 Version 0.2.1 removes local-only image names from the Compose services. Umbrel
 pulls images before running local builds; without this packaging fix it tried to
