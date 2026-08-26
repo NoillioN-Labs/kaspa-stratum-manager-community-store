@@ -1,4 +1,4 @@
-# Kaspa Stratum Manager 0.2.4 milestone
+# Kaspa Stratum Manager 0.2.5 milestone
 
 This public snapshot was exported from validated private-development commit
 `4a9d377622d787efd85c1e904562e39ea5cf0ac1` on 26 August 2026.
@@ -35,3 +35,8 @@ unprivileged while allowing it to create and retain `config.yaml`.
 Version 0.2.4 changes the stopped-state primary control from Restart to Start.
 Physical stop/restart operation, stopped-bridge recovery and complete Umbrel app
 restart recovery passed before this UI correction was published.
+
+Version 0.2.5 replaces on-device source builds with the public linux/amd64 image
+`ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.4`, pinned to immutable digest
+`sha256:0f1de9f237891c5dcc37187f805b5bf083f354d9a3e89748570b4e01b0916b4c`. GitHub Actions built the image from this public snapshot,
+and anonymous registry access was verified before the Umbrel package changed.
