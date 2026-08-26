@@ -24,4 +24,6 @@ test("dashboard source contains no representative mining records", async () => {
   assert.doesNotMatch(source, /ks5-pro-01|ks3m-shed|ks0-office/);
   assert.match(source, /No live miner data/);
   assert.match(source, /Hashrate history will appear/);
+  assert.match(source, /control\(running\?"restart":"start"\)/);
+  assert.match(source, /running\?"Restart":"Start"/);
 });

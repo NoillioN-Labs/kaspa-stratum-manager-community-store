@@ -1,4 +1,4 @@
-# Kaspa Stratum Manager 0.2.3 milestone
+# Kaspa Stratum Manager 0.2.4 milestone
 
 This public snapshot was exported from validated private-development commit
 `4a9d377622d787efd85c1e904562e39ea5cf0ac1` on 26 August 2026.
@@ -31,3 +31,7 @@ Dockerfile.
 Version 0.2.3 adds a pre-start hook that initializes only this application's
 persistent data directory for UID/GID 1000. This keeps the runtime container
 unprivileged while allowing it to create and retain `config.yaml`.
+
+Version 0.2.4 changes the stopped-state primary control from Restart to Start.
+Physical stop/restart operation, stopped-bridge recovery and complete Umbrel app
+restart recovery passed before this UI correction was published.
