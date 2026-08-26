@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [dockerfile, compose, config, route, entrypoint, packageLock] = await Promise.all([
+const [dockerfile, compose, config, route, entrypoint, preStart, packageLock] = await Promise.all([
   read("Dockerfile"), read("docker-compose.yml"), read("config/bridge.yaml"),
-  read("app/api/manager/[...path]/route.ts"), read("docker/entrypoint.sh"),
+  read("app/api/manager/[...path]/route.ts"), read("docker/entrypoint.sh"), read("hooks/pre-start"),
   read("package-lock.json"),
 ]);
 
@@ -26,5 +26,7 @@ assert.match(config, /stratum_port: ":5555"/);
 assert.match(config, /kaspad_address: "host\.docker\.internal:16110"/);
 assert.match(route, /MANAGER_INTERNAL_URL/);
 assert.match(entrypoint, /config\.yaml/);
+assert.match(preStart, /install -d -m 0750 -o 1000 -g 1000/);
+assert.match(preStart, /chown -R 1000:1000/);
 
 console.log("Umbrel packaging contract verified");
