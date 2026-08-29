@@ -23,7 +23,7 @@ Then open the NoillioN Labs App Store and install **Kaspa Stratum Manager**.
 - Prebuilt linux/amd64 image:
   `ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0`
 - Immutable image digest:
-  `sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`
+  `sha256:bdc9298b15d246763cd7e95fc0f591a3860d359cd9193ffa37a0a5b95531a7d7`
 
 Umbrel pulls this public, digest-pinned runtime image. It does not compile Rusty
 Kaspa on the device during normal installation or updates.

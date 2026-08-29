@@ -57,8 +57,8 @@ Store repository. Add this URL under **App Store → Community App Stores**:
     https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 
 The current public snapshot is milestone `0.3.0`, built from public source
-commit `40e259d3f4a4ca67e189797246ca0adc6d7de10b`. The store entry pulls a public
-linux/amd64 image pinned to immutable digest `sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`. Umbrel does not need
+commit `a6c130860ddfd0488552329e494a4ad4190d162b`. The store entry pulls a public
+linux/amd64 image pinned to immutable digest `sha256:bdc9298b15d246763cd7e95fc0f591a3860d359cd9193ffa37a0a5b95531a7d7`. Umbrel does not need
 a GitHub credential, SSH key, private LAN address or wallet address for this
 installation path.
 

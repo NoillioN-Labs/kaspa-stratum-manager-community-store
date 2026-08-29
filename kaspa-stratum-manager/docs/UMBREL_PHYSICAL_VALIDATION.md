@@ -2,7 +2,7 @@
 
 Validation date: 29 August 2026  
 Public milestone: `0.3.0`  
-Public source commit: `40e259d3f4a4ca67e189797246ca0adc6d7de10b`
+Public source commit: `a6c130860ddfd0488552329e494a4ad4190d162b`
 
 This record intentionally excludes private host addresses, wallet addresses,
 credentials, secrets and raw environment data.

@@ -2,7 +2,7 @@
 
 This public snapshot was exported from validated private-development commit
 `9b3291f656190e378c40b31d0c5615858bbec069` on 29 August 2026. The sanitized
-image source is public commit `40e259d3f4a4ca67e189797246ca0adc6d7de10b`.
+image source is public commit `a6c130860ddfd0488552329e494a4ad4190d162b`.
 
 Windows Docker validation passed for the production `linux/amd64` image:
 
@@ -69,7 +69,7 @@ again.
 
 The public linux/amd64 image is
 `ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0`, pinned to immutable digest
-`sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`.
+`sha256:bdc9298b15d246763cd7e95fc0f591a3860d359cd9193ffa37a0a5b95531a7d7`.
 GitHub Actions built it successfully and anonymous registry access confirmed an
 OCI index containing linux/amd64.
 
