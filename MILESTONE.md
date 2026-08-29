@@ -54,3 +54,7 @@ The linux/amd64 image is
 `ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6`, pinned to immutable digest
 `sha256:7db800d1b33d053ea4fef9060bd60e475599ad114580ab99602178b4162deb0c`.
 
+The physical Umbrel update to 0.2.6 completed successfully. With the KS7 Lite
+connected, the corrected combined miner hashrate displayed in TH/s and the
+live-session chart populated from bridge readings.
+
