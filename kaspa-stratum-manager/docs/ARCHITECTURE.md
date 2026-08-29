@@ -14,6 +14,12 @@ implemented in Node.js so it behaves consistently on Windows 11 during
 development and Linux inside Umbrel. Mutable state is stored under `/data`,
 mapped from `${APP_DATA_DIR}/data`.
 
+The bridge reports worker hashrate in GH/s and network hashrate in H/s. The
+overview converts worker readings to H/s, sums active workers and selects a
+human-readable GH/s or TH/s unit. Because the bridge API does not provide a
+historical series, the current chart is explicitly a browser-local live session
+and does not claim durable 24-hour history.
+
 ## Pinned bridge supply chain
 
 The container builds the official `kaspa-stratum-bridge` package from Rusty
@@ -23,6 +29,17 @@ locked dependency graph. The build is native to the selected container target,
 so the same Dockerfile supports `linux/amd64` and `linux/arm64` through Docker
 Buildx. No legacy or third-party Stratum implementation is included.
 
+## Milestone distribution
+
+The public Community App Store package does not build this source on the Umbrel
+device. GitHub Actions builds the public milestone for linux/amd64, publishes it
+to GitHub Container Registry and records the registry digest. Both web and
+manager services use the same public image pinned to
+`sha256:7db800d1b33d053ea4fef9060bd60e475599ad114580ab99602178b4162deb0c`;
+shared Docker layers avoid duplicate storage. The source and Dockerfile remain
+public for reproducibility. Linux ARM64 remains a planned release target rather
+than an advertised compatibility guarantee.
+
 The web container forwards same-origin `/api/manager/*` requests to the
 manager container over Umbrel's private application network. Only the GUI is
 exposed through Umbrel App Proxy. TCP 5555 is published separately because ASIC
@@ -31,8 +48,33 @@ forwarded by an internet-facing router.
 
 On first start, the container copies the managed default bridge configuration
 to `/data/config.yaml`. That persisted copy is retained across restarts and app
-upgrades. The private Umbrel installation must verify this persistence before
-an ASIC is connected.
+upgrades.
+
+## Settings safety and recovery
+
+The manager exposes a sanitized settings model rather than raw YAML. Only
+variable-difficulty tuning, share rate, power-of-two clamping, extranonce size,
+minimum share difficulty and the protected TCP 5555 value are represented.
+The Kaspad endpoint remains controlled by Umbrel service wiring and bridge
+command-line overrides; wallet information and credentials are outside the
+schema and rejected as unknown fields.
+
+Automatic and IceRiver presets use the proven IceRiver-compatible combination:
+variable difficulty enabled, 30 shares per minute, power-of-two clamping,
+extranonce size 2 and minimum share difficulty 2048. Custom values are checked
+for type, safe range, port, power-of-two difficulty and compatible combinations.
+
+Updates are serialized. The manager reads the current YAML, changes only the
+approved keys while preserving unrelated supported configuration, writes the
+current file to `/data/config.last-good.yaml`, then atomically replaces
+`/data/config.yaml`. It restarts the bridge and polls its status within a fixed
+deadline. A failed restart or health check atomically restores the previous
+content and performs a second restart and health check. The GUI receives an
+explicit saved, validation-failed or rolled-back result.
+
+Automated persistence and rollback tests pass. Physical persistence across a
+complete Umbrel app restart, followed by KS7 Lite reconnection, remains a
+separate acceptance gate and is not inferred from automation.
 
 ## Development, validation and production profiles
 

@@ -1,4 +1,5 @@
 # Managed default for the official Rusty Kaspa Stratum Bridge v2.0.1.
+# manager_preset: automatic
 kaspad_address: "host.docker.internal:16110"
 block_wait_time: 1000
 print_stats: true
