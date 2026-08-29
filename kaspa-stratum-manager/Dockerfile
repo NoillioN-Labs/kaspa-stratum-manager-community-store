@@ -37,7 +37,7 @@ RUN npm run build
 FROM node:24.19.0-bookworm-slim AS runtime
 ARG RUSTY_KASPA_VERSION
 ARG RUSTY_KASPA_COMMIT
-LABEL org.opencontainers.image.source="https://github.com/NoillioN-Labs/kaspa-stratum-manager" \
+LABEL org.opencontainers.image.source="https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store" \
       org.opencontainers.image.title="Kaspa Stratum Manager" \
       org.opencontainers.image.version="0.3.0" \
       io.kaspa.stratum-bridge.version="${RUSTY_KASPA_VERSION}" \
