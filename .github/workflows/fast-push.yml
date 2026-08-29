@@ -8,6 +8,9 @@ on:
     paths:
       - .github/workflows/fast-push.yml
       - kaspa-stratum-manager/app/**
+      - kaspa-stratum-manager/public/**
+      - kaspa-stratum-manager/icon.svg
+      - kaspa-stratum-manager/umbrel-app.yml
 
 concurrency:
   group: fast-push

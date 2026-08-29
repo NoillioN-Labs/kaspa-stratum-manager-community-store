@@ -4,6 +4,7 @@ category: bitcoin
 name: Kaspa Stratum Manager
 version: "0.3.1"
 tagline: Manage Kaspa solo mining from Umbrel
+icon: https://raw.githubusercontent.com/NoillioN-Labs/kaspa-stratum-manager-community-store/main/kaspa-stratum-manager/icon.svg
 description: >-
   A local-first management interface for the Rusty Kaspa Stratum Bridge.
   Connect ASIC miners to the Rusty Kaspad node already running on umbrelOS.

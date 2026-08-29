@@ -14,6 +14,7 @@ test("renders Kaspa Stratum Manager metadata", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<title>Kaspa Stratum Manager<\/title>/i);
+  assert.match(html, /<link[^>]+rel="(?:shortcut )?icon"[^>]+href="\/favicon\.svg"/i);
   assert.match(html, /src="\/kaspa-logo\.svg"/i);
   assert.match(html, />Stratum Manager<\/small>/i);
   assert.doesNotMatch(html, /codex-preview/i);
@@ -26,6 +27,9 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Miner hashrate/);
   assert.match(source, /Live session/);
   assert.match(source, /combinedMinerHashrate/);
+  assert.match(source, /workers\.slice\(0,5\)/);
+  assert.match(source, /Showing up to 5 miners/);
+  assert.match(source, /Mining gateway is online/);
   assert.doesNotMatch(source, /\["Network hashrate"/);
   assert.match(source, /control\(running\?"restart":"start"\)/);
   assert.match(source, /running\?"Restart":"Start"/);
@@ -39,3 +43,4 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /window\.location\.hostname/);
   assert.doesNotMatch(source, /umbrel\.local/i);
 });
+
