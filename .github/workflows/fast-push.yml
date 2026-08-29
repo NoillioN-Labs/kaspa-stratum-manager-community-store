@@ -61,6 +61,7 @@ jobs:
         env:
           FAST_DIGEST: ${{ steps.build.outputs.digest }}
           SOURCE_SHA: ${{ github.sha }}
+          KSM_PACKAGE_CHANNEL: fast
         run: |
           node scripts/pin-package.mjs fast "$FAST_DIGEST" "" "$SOURCE_SHA"
           npm run test:packaging
