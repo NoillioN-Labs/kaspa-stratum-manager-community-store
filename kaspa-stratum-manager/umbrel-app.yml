@@ -2,7 +2,7 @@ manifestVersion: 1.1
 id: kaspa-stratum-manager
 category: bitcoin
 name: Kaspa Stratum Manager
-version: "0.2.5"
+version: "0.2.6"
 tagline: Manage Kaspa solo mining from Umbrel
 description: >-
   A local-first management interface for the Rusty Kaspa Stratum Bridge.
@@ -14,10 +14,11 @@ support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/
 port: 5556
 gallery: []
 releaseNotes: >-
-  Switches Umbrel updates to a prebuilt, public, immutable linux/amd64 image and
-  includes the stopped-state Start control.
+  Shows combined live miner hashrate with automatic GH/s and TH/s scaling and
+  adds a live-session hashrate chart from bridge worker readings.
 path: ""
 defaultUsername: ""
 defaultPassword: ""
 submitter: Nathan Oldaker
 submission: ""
+

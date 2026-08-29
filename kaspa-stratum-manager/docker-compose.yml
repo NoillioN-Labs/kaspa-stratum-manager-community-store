@@ -7,7 +7,7 @@ services:
       APP_PORT: 8080
 
   web:
-    image: ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.4@sha256:0f1de9f237891c5dcc37187f805b5bf083f354d9a3e89748570b4e01b0916b4c
+    image: ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6@sha256:e025519debbecb68ef87bf733252182282f80ec095a9d5817afc4d8d199fc984
     command: ["npm", "run", "start", "--", "--hostname", "0.0.0.0", "--port", "8080"]
     restart: on-failure
     stop_grace_period: 30s
@@ -22,7 +22,7 @@ services:
       start_period: 20s
 
   manager:
-    image: ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.4@sha256:0f1de9f237891c5dcc37187f805b5bf083f354d9a3e89748570b4e01b0916b4c
+    image: ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6@sha256:e025519debbecb68ef87bf733252182282f80ec095a9d5817afc4d8d199fc984
     command: ["node", "server/manager.mjs"]
     restart: on-failure
     stop_grace_period: 30s
@@ -46,3 +46,4 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
