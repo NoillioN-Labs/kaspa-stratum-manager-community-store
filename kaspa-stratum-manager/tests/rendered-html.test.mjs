@@ -16,7 +16,7 @@ test("renders Kaspa Stratum Manager metadata", async () => {
   assert.match(html, /<title>Kaspa Stratum Manager<\/title>/i);
   assert.match(html, /<link[^>]+rel="(?:shortcut )?icon"[^>]+href="\/favicon\.svg"/i);
   assert.match(html, /src="\/kaspa-logo\.svg"/i);
-  assert.match(html, />Stratum Manager<\/small>/i);
+  assert.match(html, />Stratum Bridge Manager<\/small>/i);
   assert.doesNotMatch(html, /codex-preview/i);
 });
 
@@ -30,6 +30,7 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /workers\.slice\(0,5\)/);
   assert.match(source, /Showing up to 5 miners/);
   assert.match(source, /App version/);
+  assert.match(source, /Bridge version/);
   assert.match(source, /Developed by/);
   assert.match(source, /NoillioN-Labs/);
   assert.match(source, /system-health/);
