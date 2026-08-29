@@ -2,7 +2,11 @@ import { spawn } from "node:child_process";
 import http from "node:http";
 import net from "node:net";
 import process from "node:process";
+import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import {
+  atomicWrite, parseBridgeSettings, readSettingsFile, sanitizedSettingsModel, updateBridgeYaml, validateSettings,
+} from "./settings.mjs";
 
 const json = (res, status, body, origin = "") => {
   res.writeHead(status, {
@@ -38,6 +42,32 @@ const fetchJson = async (url, timeoutMs) => {
   const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
+};
+
+const readJsonBody = (req, limit = 16_384) => new Promise((resolve, reject) => {
+  let size = 0;
+  const chunks = [];
+  req.on("data", (chunk) => {
+    size += chunk.length;
+    if (size > limit) {
+      reject(Object.assign(new Error("Settings request is too large"), { statusCode: 413 }));
+      req.destroy();
+    } else chunks.push(chunk);
+  });
+  req.on("end", () => {
+    try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf8") || "null")); }
+    catch { reject(Object.assign(new Error("Settings must be valid JSON"), { statusCode: 400 })); }
+  });
+  req.on("error", reject);
+});
+
+const serialQueue = () => {
+  let tail = Promise.resolve();
+  return (operation) => {
+    const result = tail.then(operation, operation);
+    tail = result.catch(() => {});
+    return result;
+  };
 };
 
 class RingLog {
@@ -124,20 +154,68 @@ export const loadConfig = (env = process.env) => {
     bridgeEnv: { RKSTRATUM_ALLOW_CONFIG_WRITE: env.RKSTRATUM_ALLOW_CONFIG_WRITE || "0" },
     probeTimeoutMs: Number(env.PROBE_TIMEOUT_MS || 2500),
     stopTimeoutMs: Number(env.BRIDGE_STOP_TIMEOUT_MS || 10000),
+    settingsPath: env.BRIDGE_CONFIG_PATH || `${env.DATA_DIR || "/data"}/config.yaml`,
+    settingsBackupPath: env.BRIDGE_CONFIG_BACKUP_PATH || `${env.DATA_DIR || "/data"}/config.last-good.yaml`,
+    settingsHealthTimeoutMs: Number(env.SETTINGS_HEALTH_TIMEOUT_MS || 15000),
+    settingsHealthIntervalMs: Number(env.SETTINGS_HEALTH_INTERVAL_MS || 500),
     allowedOrigin: env.DEV_ALLOWED_ORIGIN || "http://localhost:3000",
   };
 };
 
-export const createManager = (config = loadConfig()) => {
+export const createManager = (config = loadConfig(), dependencies = {}) => {
   const logs = new RingLog();
-  const supervisor = new BridgeSupervisor(config, logs);
+  const supervisor = dependencies.supervisor || new BridgeSupervisor(config, logs);
+  const serializeSettingsWrite = serialQueue();
+  const waitForBridgeHealthy = dependencies.waitForBridgeHealthy || (async () => {
+    const deadline = Date.now() + config.settingsHealthTimeoutMs;
+    let lastError = "Bridge did not become healthy";
+    do {
+      try {
+        await fetchJson(`${config.bridgeApiUrl}/api/status`, Math.min(config.probeTimeoutMs, Math.max(1, deadline - Date.now())));
+        return true;
+      } catch (error) { lastError = error.message; }
+      await new Promise((resolve) => setTimeout(resolve, Math.min(config.settingsHealthIntervalMs, Math.max(0, deadline - Date.now()))));
+    } while (Date.now() < deadline);
+    throw new Error(lastError);
+  });
+
+  const saveSettings = (input) => serializeSettingsWrite(async () => {
+    const validation = validateSettings(input);
+    if (validation.issues) throw Object.assign(new Error("Settings validation failed"), { statusCode: 400, issues: validation.issues });
+    if (!supervisor.managed) throw Object.assign(new Error("Settings can only be saved in the managed Umbrel profile"), { statusCode: 409 });
+    const previous = await readFile(config.settingsPath, "utf8");
+    const updated = updateBridgeYaml(previous, validation.value);
+    await atomicWrite(config.settingsBackupPath, previous);
+    await atomicWrite(config.settingsPath, updated);
+    try {
+      await supervisor.restart();
+      await waitForBridgeHealthy();
+      return { result: "saved", settings: parseBridgeSettingsForResponse(updated), bridgeRestarted: true };
+    } catch (error) {
+      logs.add("manager", `Settings failed health check; restoring last-known-good configuration: ${error.message}`);
+      let restartError = null;
+      await atomicWrite(config.settingsPath, previous);
+      try { await supervisor.restart(); await waitForBridgeHealthy(); }
+      catch (rollbackError) { restartError = rollbackError.message; }
+      throw Object.assign(new Error("New settings failed; the last-known-good configuration was restored"), {
+        statusCode: 503,
+        result: "rolled_back",
+        rollback: { restored: true, restarted: restartError === null, healthy: restartError === null, error: restartError },
+      });
+    }
+  });
+
+  const parseBridgeSettingsForResponse = (source) => sanitizedSettingsModel(
+    // Re-read through the same parser used by GET without exposing raw YAML.
+    parseBridgeSettings(source),
+  ).settings;
 
   const handler = async (req, res) => {
     const origin = req.headers.origin === config.allowedOrigin ? config.allowedOrigin : "";
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         ...(origin ? { "access-control-allow-origin": origin } : {}),
-        "access-control-allow-methods": "GET,POST,OPTIONS",
+        "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
         "access-control-allow-headers": "content-type",
       });
       return res.end();
@@ -165,12 +243,22 @@ export const createManager = (config = loadConfig()) => {
       if (req.method === "GET" && url.pathname === "/api/manager/logs") {
         return json(res, 200, { lines: logs.list(Number(url.searchParams.get("limit") || 200)) }, origin);
       }
+      if (req.method === "GET" && url.pathname === "/api/manager/settings") {
+        return json(res, 200, sanitizedSettingsModel(await readSettingsFile(config.settingsPath)), origin);
+      }
+      if (req.method === "PUT" && url.pathname === "/api/manager/settings") {
+        return json(res, 200, await saveSettings(await readJsonBody(req)), origin);
+      }
       const action = url.pathname.match(/^\/api\/manager\/bridge\/(start|stop|restart)$/)?.[1];
       if (req.method === "POST" && action) return json(res, 200, await supervisor[action](), origin);
       return json(res, 404, { error: "not_found" }, origin);
     } catch (error) {
       logs.add("manager", error.stack || error.message);
-      return json(res, error.statusCode || 502, { error: error.message }, origin);
+      return json(res, error.statusCode || 502, {
+        error: error.message,
+        ...(error.issues ? { issues: error.issues } : {}),
+        ...(error.result ? { result: error.result, rollback: error.rollback } : {}),
+      }, origin);
     }
   };
 

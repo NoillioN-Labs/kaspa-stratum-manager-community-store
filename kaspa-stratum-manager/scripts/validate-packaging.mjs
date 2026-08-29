@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [dockerfile, compose, config, route, entrypoint, preStart, packageLock] = await Promise.all([
+const [dockerfile, compose, config, route, entrypoint, preStart, packageLock, manager, settings] = await Promise.all([
   read("Dockerfile"), read("docker-compose.yml"), read("config/bridge.yaml"),
   read("app/api/manager/[...path]/route.ts"), read("docker/entrypoint.sh"), read("hooks/pre-start"),
-  read("package-lock.json"),
+  read("package-lock.json"), read("server/manager.mjs"), read("server/settings.mjs"),
 ]);
 
 const parsedPackageLock = JSON.parse(packageLock);
@@ -26,10 +26,17 @@ assert.equal(pinnedImages[0], pinnedImages[1]);
 assert.doesNotMatch(compose, /^\s+build:/m);
 assert.match(config, /stratum_port: ":5555"/);
 assert.match(config, /kaspad_address: "host\.docker\.internal:16110"/);
+assert.match(config, /# manager_preset: automatic/);
 assert.match(route, /MANAGER_INTERNAL_URL/);
+assert.match(route, /export const PUT = proxy/);
+assert.match(manager, /\/api\/manager\/settings/);
+assert.match(manager, /config\.last-good\.yaml/);
+assert.match(manager, /Settings failed health check; restoring last-known-good configuration/);
+assert.match(settings, /The Umbrel miner port is protected at 5555/);
+assert.match(settings, /This setting is not editable/);
+assert.doesNotMatch(settings, /kaspad_address|KASPA_NODE_GRPC/);
 assert.match(entrypoint, /config\.yaml/);
 assert.match(preStart, /install -d -m 0750 -o 1000 -g 1000/);
 assert.match(preStart, /chown -R 1000:1000/);
 
 console.log("Umbrel packaging contract verified");
-

@@ -52,10 +52,9 @@ jobs:
           file: ./kaspa-stratum-manager/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ env.IMAGE }}:0.2.6
+          tags: ${{ env.IMAGE }}:0.3.0
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Record immutable digest
-        run: echo "${{ env.IMAGE }}:0.2.6@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
-
+        run: echo "${{ env.IMAGE }}:0.3.0@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"

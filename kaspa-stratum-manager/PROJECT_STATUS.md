@@ -1,7 +1,7 @@
 # Kaspa Stratum Manager — Project Status
 
 Last updated: 29 August 2026  
-Status version: 0.8
+Status version: 0.9
 Repository: https://github.com/NoillioN-Labs/kaspa-stratum-manager
 
 ## Purpose
@@ -36,6 +36,8 @@ must not be treated as the only copy.
 - Stable branch: `main`
 - Current branch: `session-2-management-api`
 - Current review: https://github.com/NoillioN-Labs/kaspa-stratum-manager/pull/1
+- Public milestone store:
+  https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 
 Never commit private LAN addresses, wallet addresses, wallet seeds, private
 keys, GitHub credentials or other secrets.
@@ -102,45 +104,124 @@ keys, GitHub credentials or other secrets.
 - Confirmed the production GUI displays live node and bridge information and
   honest zero-miner states.
 
+### Session 4 — Public milestone distribution
+
+- Kept the authoritative development repository private.
+- Created a separate public Umbrel Community App Store repository containing a
+  sanitized snapshot of milestone `0.2.0`.
+- Published public milestone `0.2.6` at commit
+  `c56619a0354b183a8804ecdbd1c6f5215703031d`.
+- Configured the public store entry to build locally on the Umbrel computer and
+  depend on the installed `rusty-kaspad` app.
+- Re-ran packaging, manager, and sensitive-data checks before publication.
+- Diagnosed the first Umbrel install attempt stopping at 1%: Umbrel's required
+  pre-build pull tried to download the named local-only image. Removed those
+  image names so the pull skips the build-only services and `up --build` can
+  build them locally.
+- Diagnosed the second install attempt from sanitized device logs: Umbrel's
+  merged Compose project resolved relative build contexts from its system
+  directory. Changed both contexts to `${APP_DATA_DIR}` so the copied package's
+  Dockerfile is found.
+- Completed the first physical installation and confirmed the GUI and App Proxy
+  start. The manager initially restarted because the bind-mounted data directory
+  was root-owned; added a scoped pre-start ownership hook so the runtime remains
+  unprivileged as UID/GID 1000.
+- Updated to public milestone `0.2.3` and confirmed a healthy physical Umbrel
+  dashboard: existing Rusty Kaspad v2.0.1 active, managed bridge running, bridge
+  API active, Umbrel runtime profile active, live network hashrate, zero miners
+  and zero accepted shares.
+- Confirmed physical stop and restart controls, recovery of a stopped bridge,
+  and full Umbrel app restart recovery. Corrected the stopped-state primary
+  action so it is explicitly labelled Start instead of Restart.
+- Added a public GitHub Actions image pipeline, successfully built linux/amd64,
+  verified anonymous registry access and pinned digest
+  `sha256:0f1de9f237891c5dcc37187f805b5bf083f354d9a3e89748570b4e01b0916b4c` in the Umbrel package.
+- Replaced on-device source builds with the prebuilt image so normal Umbrel
+  updates can deliver application source changes.
+- Updated the physical Umbrel to milestone `0.2.5` through the normal update
+  path and confirmed the prebuilt image remains healthy.
+- Confirmed the stopped bridge displays an explicit Start action and that Start
+  returns the managed bridge to a healthy running state.
+- Confirmed the manager container, Docker host publication and Umbrel host all
+  listen on Stratum TCP 5555, then connected an IceRiver KS7 Lite over the
+  private LAN. The bridge reported one online worker, approximately 4.12 TH/s
+  and 213 accepted shares during the first observation.
+- Corrected the dashboard to distinguish combined miner hashrate from Kaspa
+  network hashrate, scale worker units automatically and build a live-session
+  chart from the bridge's five-second worker readings.
+- Published the corrected linux/amd64 image as `0.2.6`, verified anonymous
+  registry access and pinned immutable digest
+  `sha256:7db800d1b33d053ea4fef9060bd60e475599ad114580ab99602178b4162deb0c`.
+- Updated the physical Umbrel to milestone `0.2.6` and confirmed the combined
+  miner hashrate display, automatic TH/s scaling and live-session chart work
+  with the connected KS7 Lite.
+
+### Session 5 — Safe persistent bridge settings
+
+- Added a strict sanitized settings model containing only approved bridge
+  tuning; it never accepts or returns node wiring, wallets, passwords or
+  credentials.
+- Added recommended Automatic and curated IceRiver presets using the physically
+  proven values: variable difficulty, 30 shares per minute, power-of-two
+  clamping, extranonce size 2 and minimum share difficulty 2048.
+- Kept the Umbrel node endpoint and fixed LAN Stratum port protected from casual
+  editing.
+- Added type, range, port, power-of-two and ASIC-combination validation.
+- Added serialized, atomic `/data/config.yaml` writes that preserve unrelated
+  supported YAML and retain `/data/config.last-good.yaml`.
+- Added bridge restart and bounded health checks after save, with automatic
+  configuration restoration and a second restart when new settings fail.
+- Implemented a non-technical Settings page with explanations, validation
+  results, explicit interruption warning and **Save and restart bridge** action.
+- Added manager coverage for sanitized reads, validation, persistence,
+  concurrent updates, restart success, restart failure and rollback, plus
+  rendered-interface and packaging assertions.
+
 ## Validation status
 
-The production dashboard build, ESLint, manager tests, statistics proxy test,
-unmanaged-profile safety test, rendered metadata test and static Umbrel
-packaging validation pass.
+The production dashboard build, ESLint, manager tests, settings persistence and
+rollback tests, statistics proxy test, unmanaged-profile safety test, rendered
+interface tests and static Umbrel packaging validation pass.
 
 The Windows Docker production-profile validation also passes for linux/amd64.
 See [docs/WINDOWS_DOCKER_VALIDATION.md](docs/WINDOWS_DOCKER_VALIDATION.md) for
 the recorded scope and privacy-safe acceptance results.
 
-Public milestone `0.2.6` is installed and healthy on the physical x86_64
-Umbrel. Rusty Kaspad v2.0.1, the managed bridge, lifecycle controls, LAN
-Stratum TCP 5555, one IceRiver KS7 Lite worker, accepted shares, combined miner
-hashrate and the live-session chart pass. No password, private address or wallet
-address is stored in this repository.
+The application is installed and healthy on the physical x86_64 Umbrel through
+the Community App Store loader. See
+[docs/UMBREL_PHYSICAL_VALIDATION.md](docs/UMBREL_PHYSICAL_VALIDATION.md) for the
+privacy-safe pass/pending record.
 
 ## Immediate next action
 
-Develop and validate persistent Settings-page changes using the proven
-IceRiver-compatible defaults, including safe bridge restart and rollback.
+Prepare a sanitized public Settings milestone and immutable linux/amd64 image,
+then validate settings persistence on the physical Umbrel through a complete
+app restart with the KS7 Lite reconnecting. Do not mark that physical gate as
+passed until the device test is complete.
 
 ## Next planned implementation
 
-1. Define validated Automatic and IceRiver bridge-setting presets.
-2. Add atomic `/data/config.yaml` persistence and a last-known-good backup.
-3. Add bounded restart health checks and automatic rollback.
-4. Implement the Settings page and automated tests.
-5. Physically verify persistence and KS7 Lite reconnection on Umbrel.
-6. Publish the next immutable linux/amd64 milestone.
-7. Add linux/arm64 before wider distribution.
+1. Publish a sanitized public milestone and immutable linux/amd64 image after
+   all automated validation remains green.
+2. Physically verify settings survive a full
+   Umbrel app restart with the KS7 Lite reconnecting.
+3. Observe extended ASIC stability and rejection rate without recording private
+   miner details.
+4. Implement durable miner-history persistence and the Logs page.
+5. Extend the digest-pinned image from linux/amd64 to linux/arm64 before wider
+   distribution.
 
 ## Known gaps
 
-- Persistent bridge configuration through the future Settings page remains
-  pending; LAN Stratum and accepted-share ASIC checks pass.
-- Linux ARM64 remains unpublished and unvalidated.
-- Durable miner history is not implemented; the current chart is browser-local.
-- Logs and settings screens are incomplete.
-- Extended ASIC stability and rejection-rate observation remain pending.
+- Automated persistent bridge configuration, restart checks and rollback pass;
+  physical persistence and KS7 Lite reconnection validation remain pending.
+- The public milestone has an immutable linux/amd64 image; linux/arm64 remains
+  unpublished and unvalidated.
+- The dashboard records live-session miner history in the browser; durable
+  miner history is not implemented.
+- The Logs screen remains incomplete.
+- The first KS7 Lite test passes connection and accepted-share gates; extended
+  stability and rejection-rate observation remain pending.
 - Main contains Session 1 until Pull Request #1 is merged.
 
 ## Resume on another computer
@@ -168,4 +249,3 @@ Then follow `docs/WINDOWS_DEVELOPMENT.md` for development or
 Update this document whenever a session changes the milestone, architecture,
 decisions, validation status, known gaps or next action. Every completed
 session must leave the repository resumable without a previous chat transcript.
-

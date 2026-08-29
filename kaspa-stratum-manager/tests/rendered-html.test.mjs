@@ -29,5 +29,11 @@ test("dashboard source contains no representative mining records", async () => {
   assert.doesNotMatch(source, /\["Network hashrate"/);
   assert.match(source, /control\(running\?"restart":"start"\)/);
   assert.match(source, /running\?"Restart":"Start"/);
+  assert.match(source, /Automatic is recommended for most miners/);
+  assert.match(source, /Save and restart bridge/);
+  assert.match(source, /Saving briefly interrupts miners/);
+  assert.match(source, /previous working settings are restored automatically/);
+  assert.match(source, /Umbrel node connection is protected/);
+  assert.match(source, /No wallet or credentials/);
+  assert.match(source, /aria-label="Stratum port"[^>]*disabled readOnly/);
 });
-

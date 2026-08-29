@@ -1,11 +1,45 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import net from "node:net";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { createManager } from "./manager.mjs";
+import { AUTOMATIC_SETTINGS } from "./settings.mjs";
 
 const listen = (server) => new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server.address().port)));
 const close = (server) => new Promise((resolve) => server.close(resolve));
+const defaultYaml = `# manager_preset: automatic
+kaspad_address: "host.docker.internal:16110"
+print_stats: true
+var_diff: true
+shares_per_min: 30
+pow2_clamp: true
+extranonce_size: 2
+unrelated_supported_option: 77
+instances:
+  - stratum_port: ":5555"
+    min_share_diff: 2048
+    prom_port: ":2114"
+`;
+const testConfig = (directory) => ({
+  listenHost:"127.0.0.1", listenPort:0, profile:"test",
+  nodeEndpoint:{host:"127.0.0.1",port:1}, bridgeApiUrl:"http://127.0.0.1:1",
+  bridgeCommand:"fake", bridgeArgs:[], bridgeWorkingDirectory:"", bridgeEnv:{},
+  probeTimeoutMs:50, stopTimeoutMs:50, allowedOrigin:"http://localhost:3000",
+  settingsPath:path.join(directory,"config.yaml"),
+  settingsBackupPath:path.join(directory,"config.last-good.yaml"),
+  settingsHealthTimeoutMs:50, settingsHealthIntervalMs:1,
+});
+const fakeSupervisor = (restart = async () => {}) => ({
+  managed:true,
+  state:()=>({managed:true,state:"running",uptime_seconds:1}),
+  start:async()=>{}, stop:async()=>{}, restart,
+});
+const putSettings = (port, body) => fetch(`http://127.0.0.1:${port}/api/manager/settings`, {
+  method:"PUT", headers:{"content-type":"application/json"}, body:JSON.stringify(body),
+});
 
 test("reports a reachable Umbrel node and bridge API", async (t) => {
   const node = net.createServer(); const nodePort = await listen(node);
@@ -41,4 +75,109 @@ test("blocks process controls in an unmanaged Windows profile", async (t) => {
   const response=await fetch(`http://127.0.0.1:${port}/api/manager/bridge/start`,{method:"POST"});
   assert.equal(response.status,409);
   assert.match((await response.json()).error,/disabled/);
+});
+
+test("reads only the sanitized settings model", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-read-"));
+  await writeFile(path.join(directory,"config.yaml"), defaultYaml);
+  const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor(), waitForBridgeHealthy:async()=>true });
+  const port = await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response = await fetch(`http://127.0.0.1:${port}/api/manager/settings`);
+  const body = await response.json();
+  assert.equal(response.status,200);
+  assert.deepEqual(body.settings,AUTOMATIC_SETTINGS);
+  assert.equal(body.protected.nodeConnection,"Managed by Umbrel");
+  assert.equal(body.protected.credentialsStored,false);
+  assert.doesNotMatch(JSON.stringify(body),/host\.docker\.internal|kaspad_address|unrelated_supported_option/);
+});
+
+test("rejects unknown fields, invalid ports, non-power-of-two difficulty, and incompatible tuning", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-invalid-"));
+  await writeFile(path.join(directory,"config.yaml"), defaultYaml);
+  let restarts=0;
+  const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor(async()=>{restarts+=1;}), waitForBridgeHealthy:async()=>true });
+  const port = await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response = await putSettings(port,{...AUTOMATIC_SETTINGS,preset:"custom",stratumPort:80,minimumShareDifficulty:3000,powerOfTwoClamp:false,wallet:"forbidden"});
+  const body = await response.json();
+  assert.equal(response.status,400);
+  assert.equal(body.error,"Settings validation failed");
+  assert.deepEqual(new Set(body.issues.map(({field})=>field)),new Set(["wallet","stratumPort","minimumShareDifficulty","powerOfTwoClamp"]));
+  assert.equal(restarts,0);
+  assert.equal(await readFile(path.join(directory,"config.yaml"),"utf8"),defaultYaml);
+});
+
+test("atomically persists approved settings, preserves unrelated configuration, backs up, and restarts", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-save-"));
+  await writeFile(path.join(directory,"config.yaml"), defaultYaml);
+  let restarts=0;
+  const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor(async()=>{restarts+=1;}), waitForBridgeHealthy:async()=>true });
+  const port = await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const settings={...AUTOMATIC_SETTINGS,preset:"custom",sharesPerMinute:20,minimumShareDifficulty:4096};
+  const response=await putSettings(port,settings); const body=await response.json();
+  assert.equal(response.status,200); assert.equal(body.result,"saved"); assert.equal(body.bridgeRestarted,true);
+  assert.equal(restarts,1);
+  assert.equal(await readFile(path.join(directory,"config.last-good.yaml"),"utf8"),defaultYaml);
+  const saved=await readFile(path.join(directory,"config.yaml"),"utf8");
+  assert.match(saved,/kaspad_address: "host\.docker\.internal:16110"/);
+  assert.match(saved,/unrelated_supported_option: 77/);
+  assert.match(saved,/stratum_port: ":5555"/);
+  assert.match(saved,/min_share_diff: 4096/);
+});
+
+test("serializes concurrent settings updates", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-concurrent-"));
+  await writeFile(path.join(directory,"config.yaml"), defaultYaml);
+  let active=0; let maximum=0; let restarts=0;
+  const manager=createManager(testConfig(directory),{
+    supervisor:fakeSupervisor(async()=>{restarts+=1;}),
+    waitForBridgeHealthy:async()=>{active+=1;maximum=Math.max(maximum,active);await new Promise(resolve=>setTimeout(resolve,15));active-=1;return true;},
+  });
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const first=putSettings(port,{...AUTOMATIC_SETTINGS,preset:"custom",sharesPerMinute:20});
+  const second=putSettings(port,{...AUTOMATIC_SETTINGS,preset:"custom",sharesPerMinute:40});
+  const responses=await Promise.all([first,second]);
+  assert.deepEqual(responses.map(({status})=>status),[200,200]);
+  assert.equal(maximum,1); assert.equal(restarts,2);
+  assert.match(await readFile(path.join(directory,"config.yaml"),"utf8"),/shares_per_min: 40/);
+});
+
+test("restores the last-known-good file and restarts after a failed new configuration", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-rollback-"));
+  await writeFile(path.join(directory,"config.yaml"), defaultYaml);
+  let restarts=0; let checks=0;
+  const manager=createManager(testConfig(directory),{
+    supervisor:fakeSupervisor(async()=>{restarts+=1;}),
+    waitForBridgeHealthy:async()=>{checks+=1;if(checks===1)throw new Error("new bridge unhealthy");return true;},
+  });
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response=await putSettings(port,{...AUTOMATIC_SETTINGS,preset:"custom",minimumShareDifficulty:4096});
+  const body=await response.json();
+  assert.equal(response.status,503); assert.equal(body.result,"rolled_back");
+  assert.deepEqual(body.rollback,{restored:true,restarted:true,healthy:true,error:null});
+  assert.equal(restarts,2); assert.equal(checks,2);
+  assert.equal(await readFile(path.join(directory,"config.yaml"),"utf8"),defaultYaml);
+  assert.equal(await readFile(path.join(directory,"config.last-good.yaml"),"utf8"),defaultYaml);
+});
+
+test("reports rollback recovery failure after restart failure", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-restart-failure-"));
+  await writeFile(path.join(directory,"config.yaml"), defaultYaml);
+  let restarts=0;
+  const manager=createManager(testConfig(directory),{
+    supervisor:fakeSupervisor(async()=>{restarts+=1;throw new Error(restarts===1?"restart failed":"rollback restart failed");}),
+    waitForBridgeHealthy:async()=>true,
+  });
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response=await putSettings(port,{...AUTOMATIC_SETTINGS,preset:"custom",minimumShareDifficulty:4096});
+  const body=await response.json();
+  assert.equal(response.status,503); assert.equal(body.result,"rolled_back");
+  assert.equal(body.rollback.restored,true); assert.equal(body.rollback.restarted,false); assert.equal(body.rollback.healthy,false);
+  assert.match(body.rollback.error,/rollback restart failed/);
+  assert.equal(await readFile(path.join(directory,"config.yaml"),"utf8"),defaultYaml);
 });
