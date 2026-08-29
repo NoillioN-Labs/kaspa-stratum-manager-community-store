@@ -2,13 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [dockerfile, compose, config, route, entrypoint, preStart, packageLock, manager, settings] = await Promise.all([
-  read("Dockerfile"), read("docker-compose.yml"), read("config/bridge.yaml"),
+const [dockerfile, compose, manifest, config, route, entrypoint, preStart, packageLock, manager, settings] = await Promise.all([
+  read("Dockerfile"), read("docker-compose.yml"), read("umbrel-app.yml"),
+  read("config/bridge.yaml"),
   read("app/api/manager/[...path]/route.ts"), read("docker/entrypoint.sh"), read("hooks/pre-start"),
   read("package-lock.json"), read("server/manager.mjs"), read("server/settings.mjs"),
 ]);
 
 const parsedPackageLock = JSON.parse(packageLock);
+const milestoneVersion = manifest.match(/^version: "(\d+\.\d+\.\d+)"$/m)?.[1];
 assert.equal(parsedPackageLock.name, "kaspa-stratum-manager");
 assert.equal(parsedPackageLock.version, "0.2.0");
 assert.equal(parsedPackageLock.lockfileVersion, 3);
@@ -23,7 +25,9 @@ assert.match(compose, /"5555:5555\/tcp"/);
 const pinnedImages = [...compose.matchAll(/image: (ghcr\.io\/noillion-labs\/kaspa-stratum-manager:[^\s@]+@sha256:[a-f0-9]{64})/g)].map((match) => match[1]);
 assert.equal(pinnedImages.length, 2);
 assert.equal(pinnedImages[0], pinnedImages[1]);
-assert.match(pinnedImages[0], /^ghcr\.io\/noillion-labs\/kaspa-stratum-manager:0\.3\.0@sha256:[a-f0-9]{64}$/);
+assert.ok(milestoneVersion, "Umbrel manifest must contain a semantic version");
+assert.equal(pinnedImages[0].split("@")[0], `ghcr.io/noillion-labs/kaspa-stratum-manager:${milestoneVersion}`);
+assert.match(pinnedImages[0], /@sha256:[a-f0-9]{64}$/);
 assert.doesNotMatch(compose, /^\s+build:/m);
 assert.match(config, /stratum_port: ":5555"/);
 assert.match(config, /kaspad_address: "host\.docker\.internal:16110"/);

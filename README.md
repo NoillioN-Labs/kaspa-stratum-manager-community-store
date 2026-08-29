@@ -36,3 +36,13 @@ remain pending and are not claimed by this release record.
 
 The snapshot intentionally excludes private LAN addresses, wallet addresses,
 credentials, secrets, Git history and untracked development files.
+
+## Development delivery workflows
+
+Routine physical testing uses the manual **Fast Push - Umbrel Test** workflow,
+which rebuilds only the application layer on top of the last verified bridge
+image and automatically publishes the next Umbrel patch package. Major
+milestones use **Slow Push - Full Release**, which retains the complete build,
+test, lint, packaging, Rust compilation, provenance and immutable-release
+gates. See
+[Fast Push and Slow Push](kaspa-stratum-manager/docs/RELEASE_WORKFLOWS.md).

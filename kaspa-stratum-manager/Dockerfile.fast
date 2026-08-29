@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1.7
+
+# Fast Push reuses the bridge and runtime from the last full, immutable release.
+FROM ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0@sha256:bdc9298b15d246763cd7e95fc0f591a3860d359cd9193ffa37a0a5b95531a7d7 AS release-base
+
+FROM node:24.19.0-bookworm-slim AS app-build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends bash coreutils \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+COPY . .
+RUN find scripts docker -type f -name '*.sh' -exec sed -i 's/\r$//' {} +
+RUN npm run build
+
+FROM release-base AS runtime
+USER root
+RUN rm -rf /opt/kaspa-stratum-manager
+COPY --from=app-build --chown=node:node /app /opt/kaspa-stratum-manager
+COPY --from=app-build /app/docker/entrypoint.sh /usr/local/bin/kaspa-manager-entrypoint
+RUN chmod 0755 /usr/local/bin/kaspa-manager-entrypoint
+LABEL org.opencontainers.image.version="fast" \
+      io.kaspa.release.workflow="fast-push"
+USER node
