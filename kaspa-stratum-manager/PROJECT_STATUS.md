@@ -1,7 +1,7 @@
 # Kaspa Stratum Manager — Project Status
 
-Last updated: 26 August 2026  
-Status version: 0.5
+Last updated: 29 August 2026  
+Status version: 0.8
 Repository: https://github.com/NoillioN-Labs/kaspa-stratum-manager
 
 ## Purpose
@@ -112,40 +112,35 @@ The Windows Docker production-profile validation also passes for linux/amd64.
 See [docs/WINDOWS_DOCKER_VALIDATION.md](docs/WINDOWS_DOCKER_VALIDATION.md) for
 the recorded scope and privacy-safe acceptance results.
 
-The application has not yet been installed through umbreld on the physical
-Umbrel computer. The host is reachable from the development computer, but this
-session does not have non-interactive SSH authorization; no password or private
-address has been stored.
+Public milestone `0.2.6` is installed and healthy on the physical x86_64
+Umbrel. Rusty Kaspad v2.0.1, the managed bridge, lifecycle controls, LAN
+Stratum TCP 5555, one IceRiver KS7 Lite worker, accepted shares, combined miner
+hashrate and the live-session chart pass. No password, private address or wallet
+address is stored in this repository.
 
 ## Immediate next action
 
-Authenticate interactively to the x86_64 Umbrel computer, copy the private app
-package into its local app store, install it with `umbreld`, and run the
-post-install checks in [docs/UMBREL_PRIVATE_INSTALL.md](docs/UMBREL_PRIVATE_INSTALL.md).
+Develop and validate persistent Settings-page changes using the proven
+IceRiver-compatible defaults, including safe bridge restart and rollback.
 
 ## Next planned implementation
 
-1. Confirm the target reports `x86_64` and Rusty Kaspad is installed and synced.
-2. Copy the private app package to the target without copying `.git`, `.env*`,
-   build output, credentials or other local-only files.
-3. Install the app with `umbreld client apps.install.mutate`.
-4. Confirm the manager starts the packaged official bridge and survives an app
-   restart with `/data/config.yaml` intact.
-5. Validate the live `/api/stats` payload and honest zero-miner mapping.
-6. Connect one ASIC miner and test accepted shares, controls and persistence.
-7. Record an immutable multi-architecture image digest before wider
-   distribution.
+1. Define validated Automatic and IceRiver bridge-setting presets.
+2. Add atomic `/data/config.yaml` persistence and a last-known-good backup.
+3. Add bounded restart health checks and automatic rollback.
+4. Implement the Settings page and automated tests.
+5. Physically verify persistence and KS7 Lite reconnection on Umbrel.
+6. Publish the next immutable linux/amd64 milestone.
+7. Add linux/arm64 before wider distribution.
 
 ## Known gaps
 
-- The first physical Umbrel private installation is waiting for interactive
-  device authentication.
-- Final published multi-architecture image digests are not yet available.
-- A community-app-store wrapper will be created after the private installation;
-  the current Compose build is for private validation.
-- Miner history persistence is not implemented.
+- Persistent bridge configuration through the future Settings page remains
+  pending; LAN Stratum and accepted-share ASIC checks pass.
+- Linux ARM64 remains unpublished and unvalidated.
+- Durable miner history is not implemented; the current chart is browser-local.
 - Logs and settings screens are incomplete.
-- ASIC testing has not started.
+- Extended ASIC stability and rejection-rate observation remain pending.
 - Main contains Session 1 until Pull Request #1 is merged.
 
 ## Resume on another computer
@@ -173,3 +168,4 @@ Then follow `docs/WINDOWS_DEVELOPMENT.md` for development or
 Update this document whenever a session changes the milestone, architecture,
 decisions, validation status, known gaps or next action. Every completed
 session must leave the repository resumable without a previous chat transcript.
+
