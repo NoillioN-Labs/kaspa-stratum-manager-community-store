@@ -23,7 +23,11 @@ test("dashboard source contains no representative mining records", async () => {
   const source = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /ks5-pro-01|ks3m-shed|ks0-office/);
   assert.match(source, /No live miner data/);
-  assert.match(source, /Hashrate history will appear/);
+  assert.match(source, /Miner hashrate/);
+  assert.match(source, /Live session/);
+  assert.match(source, /combinedMinerHashrate/);
+  assert.doesNotMatch(source, /\["Network hashrate"/);
   assert.match(source, /control\(running\?"restart":"start"\)/);
   assert.match(source, /running\?"Restart":"Start"/);
 });
+
