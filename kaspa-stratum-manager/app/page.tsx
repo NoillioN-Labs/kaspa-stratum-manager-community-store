@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 const nav = ["Overview","Miners","Logs","Diagnostics","Settings"];
-type ManagerStatus={appVersion:string;profile:string;node:{endpoint:string;reachable:boolean;latency_ms:number;error:string|null};bridge:{managed:boolean;state:string;uptime_seconds:number;api_url:string;api:{reachable:boolean;error:string|null;status?:{kaspad_version?:string}}};checked_at:string};
+type ManagerStatus={appVersion:string;bridgeVersion:string;profile:string;node:{endpoint:string;reachable:boolean;latency_ms:number;error:string|null};bridge:{managed:boolean;state:string;uptime_seconds:number;api_url:string;api:{reachable:boolean;error:string|null;status?:{kaspad_version?:string}}};checked_at:string};
 type BridgeWorker={instance?:string;worker?:string;workerName?:string;name?:string;hashrate?:number;hashrateGhs?:number;shares?:number;acceptedShares?:number;status?:string};
 type BridgeStats={activeWorkers?:number;totalShares?:number;networkHashrate?:number;bridgeUptime?:number;workers?:BridgeWorker[]};
 type BridgeSettings={preset:"automatic"|"iceriver"|"custom";stratumPort:number;variableDifficulty:boolean;sharesPerMinute:number;powerOfTwoClamp:boolean;extranonceSize:number;minimumShareDifficulty:number};
@@ -39,9 +39,9 @@ export default function Home(){
   <aside><div className="brand">
    {/* SVG stays crisp at every Umbrel display density. */}
    {/* eslint-disable-next-line @next/next/no-img-element */}
-   <img src="/kaspa-logo.svg" alt="Kaspa"/><small>Stratum Manager</small></div>
+   <img src="/kaspa-logo.svg" alt="Kaspa"/><small>Stratum Bridge Manager</small></div>
    <nav>{nav.map(x=><button key={x} className={x===section?"active":""} onClick={()=>{setSection(x);if(x==="Settings"&&!settingsModel)void loadSettings()}}>{x}</button>)}</nav>
-   <div className="aside-status"><div className="aside-connection"><i className={manager?.node.reachable?"":"bad"}/>{manager?.node.reachable?"Rusty Kaspad connected":"Rusty Kaspad unavailable"}</div><dl><div><dt>Node version</dt><dd>{manager?.bridge.api.status?.kaspad_version??"Checking…"}</dd></div><div><dt>App version</dt><dd>{manager?.appVersion??"Checking…"}</dd></div></dl></div>
+   <div className="aside-status"><div className="aside-connection"><i className={manager?.node.reachable?"":"bad"}/>{manager?.node.reachable?"Rusty Kaspad connected":"Rusty Kaspad unavailable"}</div><dl><div><dt>Node version</dt><dd>{manager?.bridge.api.status?.kaspad_version??"Checking…"}</dd></div><div><dt>Bridge version</dt><dd>{manager?.bridgeVersion??"Checking…"}</dd></div><div><dt>App version</dt><dd>{manager?.appVersion??"Checking…"}</dd></div></dl></div>
   </aside>
   <section className="workspace"><header><div><p>LOCAL MINING CONTROL</p><h1>{section}</h1></div><span className="node"><i className={manager?.node.reachable?"":"bad"}/>{manager?.node.reachable?"Node reachable":"Checking node"} <b>{manager?.node.latency_ms??"—"} ms</b></span></header>
   {error&&<div className="alert"><strong>Development connection:</strong> {error}. Start the manager on this computer to connect the dashboard.</div>}
