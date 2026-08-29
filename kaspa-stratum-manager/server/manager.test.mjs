@@ -49,7 +49,7 @@ test("reports a reachable Umbrel node and bridge API", async (t) => {
   });
   const bridgePort = await listen(bridge);
   const manager = createManager({
-    listenHost:"127.0.0.1", listenPort:0, profile:"test",
+    listenHost:"127.0.0.1", listenPort:0, appVersion:"0.3.3", profile:"test",
     nodeEndpoint:{host:"127.0.0.1",port:nodePort}, bridgeApiUrl:`http://127.0.0.1:${bridgePort}`,
     bridgeCommand:"", bridgeArgs:[], bridgeWorkingDirectory:"", bridgeEnv:{},
     probeTimeoutMs:500, stopTimeoutMs:100, allowedOrigin:"http://localhost:3000",
@@ -58,6 +58,7 @@ test("reports a reachable Umbrel node and bridge API", async (t) => {
   t.after(async()=>{await manager.close(); await close(manager.server); await close(bridge); await close(node);});
   const status = await fetch(`http://127.0.0.1:${managerPort}/api/manager/status`).then(r=>r.json());
   assert.equal(status.healthy,true); assert.equal(status.node.reachable,true);
+  assert.equal(status.appVersion,"0.3.3");
   assert.equal(status.bridge.api.status.kaspad_version,"2.0.1");
   const stats = await fetch(`http://127.0.0.1:${managerPort}/api/manager/stats`).then(r=>r.json());
   assert.equal(stats.activeWorkers,2);
@@ -181,3 +182,4 @@ test("reports rollback recovery failure after restart failure", async (t) => {
   assert.match(body.rollback.error,/rollback restart failed/);
   assert.equal(await readFile(path.join(directory,"config.yaml"),"utf8"),defaultYaml);
 });
+

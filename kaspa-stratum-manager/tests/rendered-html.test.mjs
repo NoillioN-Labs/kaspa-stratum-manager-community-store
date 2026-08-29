@@ -29,6 +29,10 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /combinedMinerHashrate/);
   assert.match(source, /workers\.slice\(0,5\)/);
   assert.match(source, /Showing up to 5 miners/);
+  assert.match(source, /App version/);
+  assert.match(source, /Developed by/);
+  assert.match(source, /NoillioN-Labs/);
+  assert.match(source, /system-health/);
   assert.match(source, /Mining gateway is online/);
   assert.doesNotMatch(source, /\["Network hashrate"/);
   assert.match(source, /control\(running\?"restart":"start"\)/);

@@ -22,6 +22,8 @@ const image = `ghcr.io/noillion-labs/kaspa-stratum-manager:${tag}@${digest}`;
 
 compose = compose.replace(/ghcr\.io\/noillion-labs\/kaspa-stratum-manager:[^\s@]+@sha256:[a-f0-9]{64}/g, image);
 assert.equal([...compose.matchAll(new RegExp(image.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))].length, 2, "Both services must use the new image");
+assert.match(compose, /^\s+APP_VERSION: "[^"]+"$/m, "Manager environment must declare APP_VERSION");
+compose = compose.replace(/^(\s+APP_VERSION:)\s*"[^"]+"$/m, `$1 "${version}"`);
 manifest = manifest.replace(/^version: ".*"$/m, `version: "${version}"`);
 manifest = manifest.replace(/releaseNotes: >-[\s\S]*?\npath:/m, `releaseNotes: >-\n  ${mode === "fast" ? "Fast Push test build" : "Full validated release"} from sanitized public source ${sourceSha.slice(0, 12)}.\npath:`);
 
@@ -37,3 +39,4 @@ if (mode === "slow") {
   await writeFile(fastDockerfileUrl, fastDockerfile);
 }
 console.log(`${mode} package pinned as ${version}: ${image}`);
+

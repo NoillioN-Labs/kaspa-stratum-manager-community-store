@@ -30,6 +30,7 @@ services:
     ports: ["5555:5555/tcp"]
     volumes: ["${APP_DATA_DIR}/data:/data"]
     environment:
+      APP_VERSION: "0.3.2"
       APP_PROFILE: umbrel
       MANAGER_HOST: 0.0.0.0
       MANAGER_PORT: 8081
