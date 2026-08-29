@@ -2,7 +2,7 @@ manifestVersion: 1.1
 id: kaspa-stratum-manager
 category: bitcoin
 name: Kaspa Stratum Manager
-version: "0.3.0"
+version: "0.3.1"
 tagline: Manage Kaspa solo mining from Umbrel
 description: >-
   A local-first management interface for the Rusty Kaspa Stratum Bridge.
@@ -14,8 +14,7 @@ support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/
 port: 5556
 gallery: []
 releaseNotes: >-
-  Adds safe persistent bridge settings with Automatic and IceRiver presets,
-  restart health checks and automatic last-known-good rollback.
+  Fast Push test build from sanitized public source 2ceafe2aed40.
 path: ""
 defaultUsername: ""
 defaultPassword: ""
