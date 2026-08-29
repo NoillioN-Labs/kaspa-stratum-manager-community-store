@@ -1,6 +1,6 @@
 manifestVersion: 1.1
 id: kaspa-stratum-manager
-category: bitcoin
+category: kaspa
 name: Kaspa Stratum Manager
 version: "0.3.3"
 tagline: Manage Kaspa solo mining from Umbrel
