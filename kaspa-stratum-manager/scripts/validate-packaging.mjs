@@ -20,8 +20,9 @@ assert.match(dockerfile, /find scripts docker -type f -name '\*\.sh' -exec sed -
 assert.match(dockerfile, /COPY --from=app-build \/app\/docker\/entrypoint\.sh/);
 assert.match(compose, /BRIDGE_COMMAND: \/usr\/local\/bin\/stratum-bridge/);
 assert.match(compose, /"5555:5555\/tcp"/);
-const pinnedImage = "ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6@sha256:e025519debbecb68ef87bf733252182282f80ec095a9d5817afc4d8d199fc984";
-assert.equal(compose.split(pinnedImage).length - 1, 2);
+const pinnedImages = [...compose.matchAll(/image: (ghcr\.io\/noillion-labs\/kaspa-stratum-manager:[^\s@]+@sha256:[a-f0-9]{64})/g)].map((match) => match[1]);
+assert.equal(pinnedImages.length, 2);
+assert.equal(pinnedImages[0], pinnedImages[1]);
 assert.doesNotMatch(compose, /^\s+build:/m);
 assert.match(config, /stratum_port: ":5555"/);
 assert.match(config, /kaspad_address: "host\.docker\.internal:16110"/);
