@@ -31,6 +31,7 @@ services:
     volumes: ["${APP_DATA_DIR}/data:/data"]
     environment:
       APP_VERSION: "0.3.4"
+      BRIDGE_VERSION: "2.0.1"
       APP_PROFILE: umbrel
       MANAGER_HOST: 0.0.0.0
       MANAGER_PORT: 8081
