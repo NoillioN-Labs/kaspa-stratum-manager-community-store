@@ -1,7 +1,7 @@
-# Kaspa Stratum Manager 0.2.5 milestone
+# Kaspa Stratum Manager 0.2.6 milestone
 
 This public snapshot was exported from validated private-development commit
-`4a9d377622d787efd85c1e904562e39ea5cf0ac1` on 26 August 2026.
+`17c0471842d39e842f3363cb13b75d6d558674f8` on 29 August 2026.
 
 Windows Docker validation passed for the production `linux/amd64` image:
 
@@ -16,8 +16,9 @@ Windows Docker validation passed for the production `linux/amd64` image:
 Physical x86_64 Umbrel installation now succeeds through the Community App
 Store loader. The production GUI, existing Rusty Kaspad v2.0.1 node, managed
 bridge, bridge API, Umbrel runtime profile and honest zero-miner state are
-healthy. Lifecycle controls, app-data persistence, LAN Stratum reachability and
-an accepted-share ASIC test remain pending.
+healthy. Lifecycle controls and LAN Stratum reachability pass. An IceRiver KS7
+Lite connected as one online worker and supplied accepted shares. App-data
+persistence after a future Settings-page change remains pending.
 
 Version 0.2.1 removes local-only image names from the Compose services. Umbrel
 pulls images before running local builds; without this packaging fix it tried to
@@ -44,3 +45,12 @@ and anonymous registry access was verified before the Umbrel package changed.
 The physical Umbrel then updated successfully through its normal App Store
 workflow. The application remained healthy, the stopped state displayed Start,
 and Start returned the managed bridge to a healthy running state.
+
+Version 0.2.6 corrects the miner hashrate presentation exposed by the first
+physical ASIC test. The overview now sums live worker readings instead of
+labelling Kaspa network hashrate as miner performance, automatically scales
+GH/s to TH/s and charts readings collected during the current browser session.
+The linux/amd64 image is
+`ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6`, pinned to immutable digest
+`sha256:e025519debbecb68ef87bf733252182282f80ec095a9d5817afc4d8d199fc984`.
+

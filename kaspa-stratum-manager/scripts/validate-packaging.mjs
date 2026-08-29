@@ -20,7 +20,7 @@ assert.match(dockerfile, /find scripts docker -type f -name '\*\.sh' -exec sed -
 assert.match(dockerfile, /COPY --from=app-build \/app\/docker\/entrypoint\.sh/);
 assert.match(compose, /BRIDGE_COMMAND: \/usr\/local\/bin\/stratum-bridge/);
 assert.match(compose, /"5555:5555\/tcp"/);
-const pinnedImage = "ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.4@sha256:0f1de9f237891c5dcc37187f805b5bf083f354d9a3e89748570b4e01b0916b4c";
+const pinnedImage = "ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6@sha256:e025519debbecb68ef87bf733252182282f80ec095a9d5817afc4d8d199fc984";
 assert.equal(compose.split(pinnedImage).length - 1, 2);
 assert.doesNotMatch(compose, /^\s+build:/m);
 assert.match(config, /stratum_port: ":5555"/);
@@ -31,3 +31,4 @@ assert.match(preStart, /install -d -m 0750 -o 1000 -g 1000/);
 assert.match(preStart, /chown -R 1000:1000/);
 
 console.log("Umbrel packaging contract verified");
+
