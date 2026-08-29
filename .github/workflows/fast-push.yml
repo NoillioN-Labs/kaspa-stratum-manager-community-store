@@ -1,0 +1,71 @@
+name: Fast Push - Umbrel Test
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: fast-push
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/noillion-labs/kaspa-stratum-manager
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out sanitized public source
+        uses: actions/checkout@v6
+
+      - name: Block sensitive public content
+        working-directory: kaspa-stratum-manager
+        run: node scripts/check-public-safety.mjs
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build only the application layer
+        id: build
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: ./kaspa-stratum-manager
+          file: ./kaspa-stratum-manager/Dockerfile.fast
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:fast
+          cache-from: type=gha,scope=fast-push
+          cache-to: type=gha,mode=max,scope=fast-push
+          provenance: false
+          sbom: false
+
+      - name: Pin the test image into the Umbrel package
+        working-directory: kaspa-stratum-manager
+        env:
+          FAST_DIGEST: ${{ steps.build.outputs.digest }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          node scripts/pin-package.mjs fast "$FAST_DIGEST" "" "$SOURCE_SHA"
+          npm run test:packaging
+
+      - name: Push the live test package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          VERSION=$(sed -n 's/^version: "\(.*\)"/\1/p' kaspa-stratum-manager/umbrel-app.yml)
+          git add kaspa-stratum-manager/docker-compose.yml kaspa-stratum-manager/umbrel-app.yml
+          git commit -m "Fast Push test package ${VERSION}"
+          git push
+
+      - name: Show test image
+        run: echo "${{ env.IMAGE }}:fast@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"

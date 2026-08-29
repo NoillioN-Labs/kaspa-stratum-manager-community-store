@@ -3,6 +3,7 @@
 # Official Rusty Kaspa v2.0.1 Stratum Bridge source pin.
 ARG RUSTY_KASPA_VERSION=v2.0.1
 ARG RUSTY_KASPA_COMMIT=cfafeb4c093fa37a303f1b9f19c58f986b870ce3
+ARG APP_VERSION=0.3.0
 
 FROM rust:1.91.0-bookworm AS bridge-build
 ARG RUSTY_KASPA_VERSION
@@ -37,9 +38,10 @@ RUN npm run build
 FROM node:24.19.0-bookworm-slim AS runtime
 ARG RUSTY_KASPA_VERSION
 ARG RUSTY_KASPA_COMMIT
+ARG APP_VERSION
 LABEL org.opencontainers.image.source="https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store" \
       org.opencontainers.image.title="Kaspa Stratum Manager" \
-      org.opencontainers.image.version="0.3.0" \
+      org.opencontainers.image.version="${APP_VERSION}" \
       io.kaspa.stratum-bridge.version="${RUSTY_KASPA_VERSION}" \
       io.kaspa.stratum-bridge.commit="${RUSTY_KASPA_COMMIT}"
 RUN apt-get update \

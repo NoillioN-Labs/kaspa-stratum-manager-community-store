@@ -9,3 +9,13 @@ node_modules
 !.env.example
 npm-debug.log*
 upload
+Dockerfile.fast
+PROJECT_STATUS.md
+README.md
+docker-compose.yml
+umbrel-app.yml
+umbrel-app-store.yml
+docs
+tests
+server/*.test.mjs
+scripts/validate-packaging.mjs

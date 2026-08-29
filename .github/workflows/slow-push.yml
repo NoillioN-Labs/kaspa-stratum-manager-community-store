@@ -1,0 +1,104 @@
+name: Slow Push - Full Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, for example 0.4.0
+        required: true
+        type: string
+      confirmation:
+        description: Type SLOW PUSH to run the full release workflow
+        required: true
+        type: string
+
+concurrency:
+  group: slow-push
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/noillion-labs/kaspa-stratum-manager
+
+jobs:
+  validate-build-and-publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require explicit confirmation
+        if: inputs.confirmation != 'SLOW PUSH'
+        run: exit 1
+
+      - name: Check out sanitized public source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: kaspa-stratum-manager/package-lock.json
+
+      - name: Install dependencies
+        working-directory: kaspa-stratum-manager
+        run: npm ci --no-audit --no-fund
+
+      - name: Run full validation
+        working-directory: kaspa-stratum-manager
+        run: |
+          npm test
+          npm run lint
+          node scripts/check-public-safety.mjs
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish the complete linux/amd64 image
+        id: build
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: ./kaspa-stratum-manager
+          file: ./kaspa-stratum-manager/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ inputs.version }}
+          build-args: APP_VERSION=${{ inputs.version }}
+          cache-from: type=gha,scope=slow-release
+          cache-to: type=gha,mode=max,scope=slow-release
+          provenance: mode=max
+          sbom: true
+
+      - name: Pin the immutable release package
+        working-directory: kaspa-stratum-manager
+        env:
+          RELEASE_DIGEST: ${{ steps.build.outputs.digest }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          node scripts/pin-package.mjs slow "$RELEASE_DIGEST" "$RELEASE_VERSION" "$SOURCE_SHA"
+          npm run test:packaging
+          node scripts/check-public-safety.mjs
+
+      - name: Publish the package pin
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kaspa-stratum-manager/docker-compose.yml kaspa-stratum-manager/umbrel-app.yml kaspa-stratum-manager/Dockerfile.fast
+          if git diff --cached --quiet; then
+            echo "Package already pinned"
+          else
+            git commit -m "Pin immutable release ${{ inputs.version }}"
+            git push
+          fi
+
+      - name: Record immutable digest
+        run: echo "${{ env.IMAGE }}:${{ inputs.version }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
