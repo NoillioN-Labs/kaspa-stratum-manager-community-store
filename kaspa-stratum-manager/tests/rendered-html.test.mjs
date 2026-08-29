@@ -25,7 +25,11 @@ test("dashboard source contains no representative mining records", async () => {
   assert.doesNotMatch(source, /representative(?:Workers|Miners)|sample(?:Workers|Miners)/i);
   assert.match(source, /No live miner data/);
   assert.match(source, /Miner hashrate/);
-  assert.match(source, /Live session/);
+  assert.match(source, /historyAverage/);
+  assert.match(source, /Live average/);
+  assert.match(source, /120 readings/);
+  assert.match(source, /5 sec each/);
+  assert.match(source, /setInterval\(refresh,5000\)/);
   assert.match(source, /combinedMinerHashrate/);
   assert.match(source, /workers\.slice\(0,5\)/);
   assert.match(source, /Showing up to 5 miners/);
