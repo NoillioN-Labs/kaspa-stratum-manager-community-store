@@ -35,7 +35,7 @@ The public Community App Store package does not build this source on the Umbrel
 device. GitHub Actions builds the public milestone for linux/amd64, publishes it
 to GitHub Container Registry and records the registry digest. Both web and
 manager services use the same public image pinned to
-`sha256:7db800d1b33d053ea4fef9060bd60e475599ad114580ab99602178b4162deb0c`;
+`sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`;
 shared Docker layers avoid duplicate storage. The source and Dockerfile remain
 public for reproducibility. Linux ARM64 remains a planned release target rather
 than an advertised compatibility guarantee.

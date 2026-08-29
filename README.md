@@ -13,21 +13,26 @@ Then open the NoillioN Labs App Store and install **Kaspa Stratum Manager**.
 
 ## Published milestone
 
-- App version: `0.2.6`
+- App version: `0.3.0`
 - Architecture tested: `linux/amd64`
 - Exported private-development commit:
-  `17c0471842d39e842f3363cb13b75d6d558674f8`
+  `9b3291f656190e378c40b31d0c5615858bbec069`
 - Official Rusty Kaspa Stratum Bridge: `v2.0.1`
 - Pinned Rusty Kaspa commit:
   `cfafeb4c093fa37a303f1b9f19c58f986b870ce3`
 - Prebuilt linux/amd64 image:
-  `ghcr.io/noillion-labs/kaspa-stratum-manager:0.2.6`
+  `ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0`
 - Immutable image digest:
-  `sha256:7db800d1b33d053ea4fef9060bd60e475599ad114580ab99602178b4162deb0c`
+  `sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`
 
 Umbrel pulls this public, digest-pinned runtime image. It does not compile Rusty
 Kaspa on the device during normal installation or updates.
 
+Version 0.3.0 adds sanitized persistent bridge settings, Automatic and
+IceRiver presets, strict validation, atomic writes, bounded restart checks and
+automatic last-known-good rollback. Automated validation and the linux/amd64
+image build pass. Physical settings persistence and KS7 Lite reconnection
+remain pending and are not claimed by this release record.
+
 The snapshot intentionally excludes private LAN addresses, wallet addresses,
 credentials, secrets, Git history and untracked development files.
-

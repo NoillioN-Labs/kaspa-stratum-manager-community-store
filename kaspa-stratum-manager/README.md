@@ -56,9 +56,9 @@ Store repository. Add this URL under **App Store → Community App Stores**:
 
     https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 
-The current public snapshot is milestone `0.2.6`, public commit
-`c56619a0354b183a8804ecdbd1c6f5215703031d`. The store entry pulls a public
-linux/amd64 image pinned to immutable digest `sha256:7db800d1b33d053ea4fef9060bd60e475599ad114580ab99602178b4162deb0c`. Umbrel does not need
+The current public snapshot is milestone `0.3.0`, built from public source
+commit `40e259d3f4a4ca67e189797246ca0adc6d7de10b`. The store entry pulls a public
+linux/amd64 image pinned to immutable digest `sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`. Umbrel does not need
 a GitHub credential, SSH key, private LAN address or wallet address for this
 installation path.
 
@@ -69,6 +69,6 @@ healthy. See
 [docs/UMBREL_PHYSICAL_VALIDATION.md](docs/UMBREL_PHYSICAL_VALIDATION.md) for the
 remaining validation gates.
 
-The public `0.2.6` package does not yet include the Settings milestone. A new
-public version and immutable digest must be recorded here only after the
-sanitized package and image pipeline pass.
+Milestone `0.3.0` includes the Settings implementation and has passed automated
+validation and image publication. Physical settings persistence and KS7 Lite
+reconnection remain pending.

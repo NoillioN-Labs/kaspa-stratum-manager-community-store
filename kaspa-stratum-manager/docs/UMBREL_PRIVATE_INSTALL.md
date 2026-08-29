@@ -37,7 +37,7 @@ or SSH key.
 ## 2. Install the milestone
 
 Open the NoillioN Labs store, select **Kaspa Stratum Manager**, and choose
-**Install**. Milestone `0.2.6` pulls a public linux/amd64 image pinned to an
+**Install**. Milestone `0.3.0` pulls a public linux/amd64 image pinned to an
 immutable digest. Umbrel does not compile Rusty Kaspa locally during normal
 installation or updates.
 
