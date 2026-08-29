@@ -6,11 +6,11 @@ on the Umbrel computer on the same LAN.
 ## 1. Confirm name resolution and RPC reachability
 
 ```powershell
-ping umbrel.local
-Test-NetConnection umbrel.local -Port 16110
+ping <umbrel-hostname>
+Test-NetConnection <umbrel-hostname> -Port 16110
 ```
 
-If `umbrel.local` does not resolve, use the Umbrel computer's reserved LAN IP
+If the hostname does not resolve, use the Umbrel computer's reserved LAN IP
 address instead.
 
 ## 2. Configure the manager
@@ -19,7 +19,7 @@ address instead.
 Copy-Item .env.example .env.local
 ```
 
-Set `KASPA_NODE_GRPC` to `umbrel.local:16110` or `<UMBrel-IP>:16110`.
+Set `KASPA_NODE_GRPC` to `<umbrel-hostname>:16110` in untracked local settings.
 Do not add GitHub credentials, wallet seeds or private keys to this file.
 
 ## 3. Run the manager
