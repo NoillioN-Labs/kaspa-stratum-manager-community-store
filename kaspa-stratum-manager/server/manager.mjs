@@ -146,6 +146,7 @@ export const loadConfig = (env = process.env) => {
     listenHost: env.MANAGER_HOST || "0.0.0.0",
     listenPort: Number(env.MANAGER_PORT || 8081),
     appVersion: env.APP_VERSION || "development",
+    bridgeVersion: env.BRIDGE_VERSION || "unknown",
     profile: env.APP_PROFILE || "windows-development",
     nodeEndpoint: parseEndpoint(env.KASPA_NODE_GRPC || "127.0.0.1:16110", 16110),
     bridgeApiUrl: (env.BRIDGE_API_URL || "http://127.0.0.1:3030").replace(/\/$/, ""),
@@ -232,6 +233,7 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
         const body = {
           healthy: node.reachable && (bridgeApi.reachable || !supervisor.managed),
           appVersion: config.appVersion || "development",
+          bridgeVersion: config.bridgeVersion || "unknown",
           profile: config.profile,
           node: { endpoint: `${config.nodeEndpoint.host}:${config.nodeEndpoint.port}`, ...node },
           bridge: { ...supervisor.state(), api_url: config.bridgeApiUrl, api: bridgeApi },
