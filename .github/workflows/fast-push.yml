@@ -9,7 +9,11 @@ on:
       - .github/workflows/fast-push.yml
       - kaspa-stratum-manager/app/**
       - kaspa-stratum-manager/public/**
+      - kaspa-stratum-manager/server/**
+      - kaspa-stratum-manager/tests/**
+      - kaspa-stratum-manager/scripts/**
       - kaspa-stratum-manager/icon.svg
+      - kaspa-stratum-manager/docker-compose.yml
       - kaspa-stratum-manager/umbrel-app.yml
 
 concurrency:

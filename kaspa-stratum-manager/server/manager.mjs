@@ -145,6 +145,7 @@ export const loadConfig = (env = process.env) => {
   return {
     listenHost: env.MANAGER_HOST || "0.0.0.0",
     listenPort: Number(env.MANAGER_PORT || 8081),
+    appVersion: env.APP_VERSION || "development",
     profile: env.APP_PROFILE || "windows-development",
     nodeEndpoint: parseEndpoint(env.KASPA_NODE_GRPC || "127.0.0.1:16110", 16110),
     bridgeApiUrl: (env.BRIDGE_API_URL || "http://127.0.0.1:3030").replace(/\/$/, ""),
@@ -230,6 +231,7 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
         } catch (error) { bridgeApi.error = error.cause?.code || error.message; }
         const body = {
           healthy: node.reachable && (bridgeApi.reachable || !supervisor.managed),
+          appVersion: config.appVersion || "development",
           profile: config.profile,
           node: { endpoint: `${config.nodeEndpoint.host}:${config.nodeEndpoint.port}`, ...node },
           bridge: { ...supervisor.state(), api_url: config.bridgeApiUrl, api: bridgeApi },
@@ -281,3 +283,4 @@ if (isMain) {
   const shutdown = async () => { await manager.close(); manager.server.close(() => process.exit(0)); };
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
 }
+
