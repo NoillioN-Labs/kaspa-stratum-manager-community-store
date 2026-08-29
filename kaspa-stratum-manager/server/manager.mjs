@@ -146,7 +146,7 @@ export const loadConfig = (env = process.env) => {
     listenHost: env.MANAGER_HOST || "0.0.0.0",
     listenPort: Number(env.MANAGER_PORT || 8081),
     profile: env.APP_PROFILE || "windows-development",
-    nodeEndpoint: parseEndpoint(env.KASPA_NODE_GRPC || "umbrel.local:16110", 16110),
+    nodeEndpoint: parseEndpoint(env.KASPA_NODE_GRPC || "127.0.0.1:16110", 16110),
     bridgeApiUrl: (env.BRIDGE_API_URL || "http://127.0.0.1:3030").replace(/\/$/, ""),
     bridgeCommand: env.BRIDGE_COMMAND || "",
     bridgeArgs,

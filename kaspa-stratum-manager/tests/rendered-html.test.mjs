@@ -21,7 +21,7 @@ test("renders Kaspa Stratum Manager metadata", async () => {
 
 test("dashboard source contains no representative mining records", async () => {
   const source = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /ks5-pro-01|ks3m-shed|ks0-office/);
+  assert.doesNotMatch(source, /representative(?:Workers|Miners)|sample(?:Workers|Miners)/i);
   assert.match(source, /No live miner data/);
   assert.match(source, /Miner hashrate/);
   assert.match(source, /Live session/);
@@ -36,4 +36,6 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Umbrel node connection is protected/);
   assert.match(source, /No wallet or credentials/);
   assert.match(source, /aria-label="Stratum port"[^>]*disabled readOnly/);
+  assert.match(source, /window\.location\.hostname/);
+  assert.doesNotMatch(source, /umbrel\.local/i);
 });

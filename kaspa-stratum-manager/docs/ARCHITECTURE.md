@@ -79,8 +79,8 @@ separate acceptance gate and is not inferred from automation.
 ## Development, validation and production profiles
 
 - `windows-development`: manager runs on the Windows 11 development computer,
-  connects to `umbrel.local:16110`, and does not control a bridge process by
-  default.
+  uses an endpoint supplied through untracked local settings, and does not
+  control a bridge process by default.
 - Windows Docker production validation: the complete `linux/amd64` image runs
   locally in the `umbrel` profile against the LAN Rusty Kaspad service. This
   profile has passed GUI, bridge API, statistics, Stratum and lifecycle-control
