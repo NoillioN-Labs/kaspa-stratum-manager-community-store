@@ -28,7 +28,7 @@ assert.equal(pinnedImages[0], pinnedImages[1]);
 assert.ok(milestoneVersion, "Umbrel manifest must contain a semantic version");
 assert.match(manifest, /^icon: https:\/\/raw\.githubusercontent\.com\/NoillioN-Labs\/kaspa-stratum-manager-community-store\/main\/kaspa-stratum-manager\/icon\.svg$/m);
 assert.match(compose, new RegExp(`^\\s+APP_VERSION: "${milestoneVersion.replace(/\./g, "\\.")}"$`, "m"));
-assert.match(compose, /^\\s+BRIDGE_VERSION: "2\\.0\\.1"$/m);
+assert.match(compose, /^\s+BRIDGE_VERSION: "2\.0\.1"$/m);
 const expectedImageTag = process.env.KSM_PACKAGE_CHANNEL === "fast" ? "fast" : milestoneVersion;
 assert.equal(pinnedImages[0].split("@")[0], `ghcr.io/noillion-labs/kaspa-stratum-manager:${expectedImageTag}`);
 assert.match(pinnedImages[0], /@sha256:[a-f0-9]{64}$/);
