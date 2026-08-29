@@ -26,7 +26,8 @@ const pinnedImages = [...compose.matchAll(/image: (ghcr\.io\/noillion-labs\/kasp
 assert.equal(pinnedImages.length, 2);
 assert.equal(pinnedImages[0], pinnedImages[1]);
 assert.ok(milestoneVersion, "Umbrel manifest must contain a semantic version");
-assert.equal(pinnedImages[0].split("@")[0], `ghcr.io/noillion-labs/kaspa-stratum-manager:${milestoneVersion}`);
+const expectedImageTag = process.env.KSM_PACKAGE_CHANNEL === "fast" ? "fast" : milestoneVersion;
+assert.equal(pinnedImages[0].split("@")[0], `ghcr.io/noillion-labs/kaspa-stratum-manager:${expectedImageTag}`);
 assert.match(pinnedImages[0], /@sha256:[a-f0-9]{64}$/);
 assert.doesNotMatch(compose, /^\s+build:/m);
 assert.match(config, /stratum_port: ":5555"/);
@@ -45,3 +46,4 @@ assert.match(preStart, /install -d -m 0750 -o 1000 -g 1000/);
 assert.match(preStart, /chown -R 1000:1000/);
 
 console.log("Umbrel packaging contract verified");
+
