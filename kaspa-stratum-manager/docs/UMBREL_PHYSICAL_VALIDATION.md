@@ -1,11 +1,15 @@
 # x86_64 Umbrel physical validation
 
 Validation date: 29 August 2026  
-Public milestone: `0.2.6`  
-Public milestone commit: `c56619a0354b183a8804ecdbd1c6f5215703031d`
+Public milestone: `0.3.0`  
+Public source commit: `40e259d3f4a4ca67e189797246ca0adc6d7de10b`
 
 This record intentionally excludes private host addresses, wallet addresses,
 credentials, secrets and raw environment data.
+
+Confirmed device results below were completed through milestone `0.2.6`.
+Milestone `0.3.0` is published but has not yet completed the physical Settings
+acceptance gates.
 
 ## Confirmed
 
@@ -52,8 +56,7 @@ credentials, secrets and raw environment data.
 
 ## Still pending
 
-- Publish and install the sanitized Settings milestone; public `0.2.6` does not
-  contain it.
+- Install the sanitized public `0.3.0` Settings milestone.
 - Save a safe setting through the GUI, confirm the bridge passes its health
   check and the KS7 Lite reconnects.
 - Restart the complete Umbrel app and confirm `/data/config.yaml` retains the

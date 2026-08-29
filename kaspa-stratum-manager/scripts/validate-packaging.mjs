@@ -23,6 +23,7 @@ assert.match(compose, /"5555:5555\/tcp"/);
 const pinnedImages = [...compose.matchAll(/image: (ghcr\.io\/noillion-labs\/kaspa-stratum-manager:[^\s@]+@sha256:[a-f0-9]{64})/g)].map((match) => match[1]);
 assert.equal(pinnedImages.length, 2);
 assert.equal(pinnedImages[0], pinnedImages[1]);
+assert.equal(pinnedImages[0], "ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0@sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729");
 assert.doesNotMatch(compose, /^\s+build:/m);
 assert.match(config, /stratum_port: ":5555"/);
 assert.match(config, /kaspad_address: "host\.docker\.internal:16110"/);

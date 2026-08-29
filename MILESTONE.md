@@ -1,7 +1,8 @@
-# Kaspa Stratum Manager 0.2.6 milestone
+# Kaspa Stratum Manager 0.3.0 milestone
 
 This public snapshot was exported from validated private-development commit
-`17c0471842d39e842f3363cb13b75d6d558674f8` on 29 August 2026.
+`9b3291f656190e378c40b31d0c5615858bbec069` on 29 August 2026. The sanitized
+image source is public commit `40e259d3f4a4ca67e189797246ca0adc6d7de10b`.
 
 Windows Docker validation passed for the production `linux/amd64` image:
 
@@ -58,3 +59,21 @@ The physical Umbrel update to 0.2.6 completed successfully. With the KS7 Lite
 connected, the corrected combined miner hashrate displayed in TH/s and the
 live-session chart populated from bridge readings.
 
+Version 0.3.0 adds a non-technical Settings page backed by a sanitized manager
+API. Automatic and IceRiver presets use the proven bridge defaults without
+accepting or returning node wiring, wallets, miner passwords or credentials.
+Approved changes are validated, serialized and written atomically while
+preserving unrelated supported configuration. The bridge restarts and receives
+a bounded health check; failure restores the last-known-good file and restarts
+again.
+
+The public linux/amd64 image is
+`ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0`, pinned to immutable digest
+`sha256:4e23bf04258951afaeacce3a656f2cd7351fcc1ec78dfb708667468abd9ae729`.
+GitHub Actions built it successfully and anonymous registry access confirmed an
+OCI index containing linux/amd64.
+
+Physical 0.3.0 persistence validation is pending. The milestone must be updated
+on the Umbrel, a safe setting saved, the bridge health check observed, the KS7
+Lite reconnected, and the complete app restarted before persistence is marked
+passed.
