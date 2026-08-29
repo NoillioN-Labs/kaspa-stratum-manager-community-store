@@ -111,6 +111,7 @@
 .miners-directory .table{min-height:0;max-height:none;overflow:auto}
 .miners-directory table{margin-top:7px}
 .miners-directory th,.miners-directory td{height:auto;padding:12px 10px}
+.chart-average{display:grid;justify-items:end;line-height:1.15;text-align:right}.chart-average span{color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.chart-average strong{margin:3px 0 2px;color:var(--ink);font-size:15px}.chart-average small{color:var(--muted);font-size:8px}
 
 @media (max-width:700px){
  .shell{min-width:0;overflow-x:hidden}
@@ -132,6 +133,7 @@
  .miners-directory td:first-child{border-top:0}
  .miners-directory td::before{content:attr(data-label);color:#8b9994;font-size:8px;font-weight:800;text-transform:uppercase}
  .miners-directory-foot{align-items:flex-start;flex-direction:column}
+ .chart-average strong{font-size:13px}
 }
 
 @media (max-width:460px){
