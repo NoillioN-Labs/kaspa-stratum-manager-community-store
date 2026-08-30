@@ -18,6 +18,13 @@ followed by a bounded bridge restart check. If the new configuration fails, the
 manager restores `/data/config.last-good.yaml` and restarts the bridge again.
 TCP 5555 remains protected to match the Umbrel service mapping.
 
+The manager also keeps a privacy-limited seven-day mining history under
+`/data`. The Miners page shows average miner and network performance, confirmed
+blocks, expected blocks, seven-day probability and estimated average time to a
+block for the combined setup and each worker. These forecasts use locally
+observed hashrate and network changes and are clearly presented as estimates,
+not guarantees.
+
 On Windows, copy `.env.example` to `.env.local`, run
 `npm run manager:dev`, then run `npm run dev` in a second terminal. See
 [docs/WINDOWS_DEVELOPMENT.md](docs/WINDOWS_DEVELOPMENT.md) for development and
@@ -56,8 +63,8 @@ Store repository. Add this URL under **App Store → Community App Stores**:
 
     https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 
-The current public snapshot is milestone `0.3.0`, built from public source
-commit `a6c130860ddfd0488552329e494a4ad4190d162b`. The store entry pulls a public
+The current public snapshot is milestone `0.3.0`, public commit
+`88eaabb0093d487eaa1b0a0592fabf8b3d91cbb6`. The store entry pulls a public
 linux/amd64 image pinned to immutable digest `sha256:bdc9298b15d246763cd7e95fc0f591a3860d359cd9193ffa37a0a5b95531a7d7`. Umbrel does not need
 a GitHub credential, SSH key, private LAN address or wallet address for this
 installation path.
@@ -69,6 +76,14 @@ healthy. See
 [docs/UMBREL_PHYSICAL_VALIDATION.md](docs/UMBREL_PHYSICAL_VALIDATION.md) for the
 remaining validation gates.
 
-Milestone `0.3.0` includes the Settings implementation and has passed automated
-validation and image publication. Physical settings persistence and KS7 Lite
-reconnection remain pending.
+Milestone `0.3.0` adds the safe persistent Settings implementation and has
+passed automated build, test, lint, packaging, registry and sensitive-data
+checks. Physical Settings persistence and miner reconnection validation remain
+pending and are not inferred from automation.
+
+Routine development delivery now uses **Fast Push**, which rebuilds only the
+application layer on the last verified bridge image and publishes the next
+Umbrel patch package. **Slow Push** retains the complete Rust build and release
+validation for major milestones. See
+[docs/RELEASE_WORKFLOWS.md](docs/RELEASE_WORKFLOWS.md).
+
