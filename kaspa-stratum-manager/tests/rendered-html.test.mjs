@@ -53,6 +53,11 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Complete live worker list/);
   assert.match(source, /Live data refreshes every 5 seconds/);
   assert.match(source, /Connect miners to your Umbrel/);
+  assert.match(source, /Live application logs/);
+  assert.match(source, /api\/manager\/logs\?limit=200/);
+  assert.match(source, /Newest messages appear first/);
+  assert.match(source, /Kept in memory only/);
+  assert.match(source, /aria-label="Search logs"/);
   assert.match(source, /aria-label="Stratum port"[^>]*disabled readOnly/);
   assert.match(source, /window\.location\.hostname/);
   assert.doesNotMatch(source, /umbrel\.local/i);
