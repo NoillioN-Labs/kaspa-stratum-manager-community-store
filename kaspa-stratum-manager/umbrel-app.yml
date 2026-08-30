@@ -17,7 +17,7 @@ support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/
 port: 5556
 gallery: []
 releaseNotes: >-
-  Fast Push test build from sanitized public source 94a89ac4a5a5.
+  Minor bug fixes and improvements.
 path: ""
 defaultUsername: ""
 defaultPassword: ""
