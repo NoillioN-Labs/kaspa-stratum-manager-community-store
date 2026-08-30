@@ -15,6 +15,8 @@ RUN find scripts docker -type f -name '*.sh' -exec sed -i 's/\r$//' {} +
 RUN npm run build
 
 FROM release-base AS runtime
+ARG KSM_DONATION_KASPA_ADDRESS=""
+ARG KSM_DONATION_BITCOIN_ADDRESS=""
 USER root
 RUN rm -rf /opt/kaspa-stratum-manager
 COPY --from=app-build --chown=node:node /app /opt/kaspa-stratum-manager
@@ -22,4 +24,6 @@ COPY --from=app-build /app/docker/entrypoint.sh /usr/local/bin/kaspa-manager-ent
 RUN chmod 0755 /usr/local/bin/kaspa-manager-entrypoint
 LABEL org.opencontainers.image.version="fast" \
       io.kaspa.release.workflow="fast-push"
+ENV KSM_DONATION_KASPA_ADDRESS="${KSM_DONATION_KASPA_ADDRESS}" \
+    KSM_DONATION_BITCOIN_ADDRESS="${KSM_DONATION_BITCOIN_ADDRESS}"
 USER node

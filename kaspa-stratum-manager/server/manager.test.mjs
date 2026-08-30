@@ -106,6 +106,35 @@ test("returns bounded in-memory manager and bridge logs", async (t) => {
   assert.ok(body.lines.every(({timestamp})=>!Number.isNaN(Date.parse(timestamp))));
 });
 
+test("returns only validated public donation addresses", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-support-"));
+  const config = testConfig(directory);
+  config.donationKaspaAddress = "kaspa:" + "q".repeat(61);
+  config.donationBitcoinAddress = "bc1q" + "q".repeat(38);
+  const manager = createManager(config, { supervisor:fakeSupervisor() });
+  const port = await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response=await fetch(`http://127.0.0.1:${port}/api/manager/support`);
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.enabled,true);
+  assert.deepEqual(body.currencies.map(({id})=>id),["kaspa","bitcoin"]);
+  assert.equal(body.currencies[0].paymentUri,body.currencies[0].address);
+  assert.equal(body.currencies[1].paymentUri,`bitcoin:${body.currencies[1].address}`);
+});
+
+test("hides malformed donation configuration", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-support-invalid-"));
+  const config = testConfig(directory);
+  config.donationKaspaAddress = "not-an-address";
+  config.donationBitcoinAddress = "not-an-address";
+  const manager = createManager(config, { supervisor:fakeSupervisor() });
+  const port = await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const body=await fetch(`http://127.0.0.1:${port}/api/manager/support`).then(response=>response.json());
+  assert.deepEqual(body,{enabled:false,currencies:[]});
+});
+
 test("returns sanitized durable mining history and block outlook", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-history-"));
   const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor() });
@@ -230,4 +259,3 @@ test("reports rollback recovery failure after restart failure", async (t) => {
   assert.match(body.rollback.error,/rollback restart failed/);
   assert.equal(await readFile(path.join(directory,"config.yaml"),"utf8"),defaultYaml);
 });
-

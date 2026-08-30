@@ -166,8 +166,22 @@ export const loadConfig = (env = process.env) => {
     historyRetentionMs: Number(env.HISTORY_RETENTION_MS || SEVEN_DAYS_MS),
     historySampleIntervalMs: Number(env.HISTORY_SAMPLE_INTERVAL_MS || 60000),
     historyFlushIntervalMs: Number(env.HISTORY_FLUSH_INTERVAL_MS || 300000),
+    donationKaspaAddress: env.KSM_DONATION_KASPA_ADDRESS || "",
+    donationBitcoinAddress: env.KSM_DONATION_BITCOIN_ADDRESS || "",
     allowedOrigin: env.DEV_ALLOWED_ORIGIN || "http://localhost:3000",
   };
+};
+
+const validKaspaDonationAddress = (value) => /^kaspa:[a-z0-9]{61,90}$/.test(value);
+const validBitcoinDonationAddress = (value) => /^(?:bc1[ac-hj-np-z02-9]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(value);
+const donationSupportModel = (config) => {
+  const kaspa = String(config.donationKaspaAddress || "").trim();
+  const bitcoin = String(config.donationBitcoinAddress || "").trim();
+  const currencies = [
+    ...(validKaspaDonationAddress(kaspa) ? [{ id: "kaspa", label: "Kaspa", address: kaspa, paymentUri: kaspa }] : []),
+    ...(validBitcoinDonationAddress(bitcoin) ? [{ id: "bitcoin", label: "Bitcoin", address: bitcoin, paymentUri: `bitcoin:${bitcoin}` }] : []),
+  ];
+  return { enabled: currencies.length > 0, currencies };
 };
 
 export const createManager = (config = loadConfig(), dependencies = {}) => {
@@ -285,6 +299,9 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
       if (req.method === "GET" && url.pathname === "/api/manager/history") {
         return json(res, 200, await history.summary(), origin);
       }
+      if (req.method === "GET" && url.pathname === "/api/manager/support") {
+        return json(res, 200, donationSupportModel(config), origin);
+      }
       if (req.method === "GET" && url.pathname === "/api/manager/logs") {
         return json(res, 200, { lines: logs.list(Number(url.searchParams.get("limit") || 200)) }, origin);
       }
@@ -327,4 +344,3 @@ if (isMain) {
   const shutdown = async () => { await manager.close(); manager.server.close(() => process.exit(0)); };
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
 }
-

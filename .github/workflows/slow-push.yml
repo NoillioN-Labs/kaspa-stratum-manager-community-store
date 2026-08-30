@@ -73,7 +73,10 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.IMAGE }}:${{ inputs.version }}
-          build-args: APP_VERSION=${{ inputs.version }}
+          build-args: |
+            APP_VERSION=${{ inputs.version }}
+            KSM_DONATION_KASPA_ADDRESS=${{ secrets.KSM_DONATION_KASPA_ADDRESS }}
+            KSM_DONATION_BITCOIN_ADDRESS=${{ secrets.KSM_DONATION_BITCOIN_ADDRESS }}
           cache-from: type=gha,scope=slow-release
           cache-to: type=gha,mode=max,scope=slow-release
           provenance: mode=max

@@ -58,6 +58,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.IMAGE }}:fast
+          build-args: |
+            KSM_DONATION_KASPA_ADDRESS=${{ secrets.KSM_DONATION_KASPA_ADDRESS }}
+            KSM_DONATION_BITCOIN_ADDRESS=${{ secrets.KSM_DONATION_BITCOIN_ADDRESS }}
           cache-from: type=gha,scope=fast-push
           cache-to: type=gha,mode=max,scope=fast-push
           provenance: false

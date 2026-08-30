@@ -86,9 +86,24 @@
 .system-health .health strong{min-width:0;line-height:1.2}
 .system-health .health small{margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}
 .system-health .health span{min-width:56px;text-align:right}
-.workspace-footer{display:flex;align-items:center;justify-content:center;gap:6px;color:#899892;font-size:9px}
+.workspace-footer{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#899892;font-size:9px}
+.developer-credit{display:flex;align-items:center;justify-content:center;gap:6px}
 .workspace-footer a{color:#248a6b;font-weight:800;text-decoration:none}
 .workspace-footer a:hover{text-decoration:underline}
+.donation-area{position:relative;display:flex;justify-content:center}
+.donation-toggle{border:0;background:transparent;color:#248a6b;font:inherit;font-weight:800;cursor:pointer;padding:1px 4px}
+.donation-toggle:hover{text-decoration:underline}
+.donation-popover{position:absolute;z-index:8;bottom:24px;width:min(390px,calc(100vw - 34px));padding:14px;border:1px solid #cddbd5;border-radius:14px;background:#fff;box-shadow:0 14px 38px rgba(17,47,38,.18);color:#17392f;text-align:left;font-size:11px}
+.donation-popover>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.donation-popover>div:first-child strong{font-size:13px}
+.donation-popover>div:first-child button{border:0;background:transparent;color:#72847e;font-size:18px;cursor:pointer}
+.donation-popover>p{margin:5px 0 10px;color:#657770;line-height:1.45}
+.donation-popover article{display:grid;gap:5px;padding:9px 0;border-top:1px solid #e4ece8}
+.donation-popover article>span{font-weight:800;color:#17392f}
+.donation-popover code{display:block;max-width:100%;padding:7px 8px;border-radius:7px;background:#f1f6f4;color:#315249;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
+.donation-popover article>div{display:flex;gap:7px}
+.donation-popover article button,.donation-popover article a{border:1px solid #b7cec5;border-radius:7px;background:#fff;color:#248a6b;padding:5px 8px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}
+.donation-popover article a{background:#e3f5ef}
 
 @media (min-width:981px){
  .system-health{display:grid;grid-template-rows:38px repeat(4,minmax(0,1fr));overflow:hidden}
@@ -152,4 +167,3 @@
 @media(max-width:980px){.outlook-cards{grid-template-columns:repeat(2,1fr)}.outlook-inputs{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.outlook-cards,.outlook-inputs{grid-template-columns:1fr}.outlook-inputs span{align-items:center}.miner-outlook-table .table{overflow:visible}.miner-outlook-table table,.miner-outlook-table tbody,.miner-outlook-table tr,.miner-outlook-table td{display:block;width:100%}.miner-outlook-table thead{display:none}.miner-outlook-table tbody{display:grid;gap:10px;margin-top:14px}.miner-outlook-table tr{padding:8px 12px;border:1px solid var(--line);border-radius:11px;background:#fbfdfc}.miner-outlook-table td{display:grid;grid-template-columns:125px minmax(0,1fr);align-items:center;gap:12px;padding:8px 0;border-top:1px solid #edf1ef;white-space:normal}.miner-outlook-table td:first-child{border-top:0}.miner-outlook-table td::before{content:attr(data-label);color:#8b9994;font-size:8px;font-weight:800;text-transform:uppercase}}
 @media(max-width:460px){.miner-outlook-table td{grid-template-columns:105px minmax(0,1fr)}}
-
