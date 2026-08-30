@@ -76,9 +76,12 @@ app restart, prebuilt updates and LAN Stratum connection have been exercised.
 An IceRiver KS7 Lite connected successfully, reported live hashrate and
 submitted accepted shares.
 
-Automated persistence, rollback and history tests pass. Extended ASIC
-stability/rejection-rate observation, physical seven-day history persistence
-verification and linux/arm64 publication remain future validation work.
+Automated persistence, rollback and history tests pass. On physical version
+1.0.0, all five pages work correctly, a complete app restart succeeded, and
+the seven-day history was retained and remained accurate. Changed Settings
+persistence, explicit KS7 Lite reconnection, extended ASIC
+stability/rejection-rate observation and linux/arm64 publication remain future
+validation work.
 
 ## Support
 
