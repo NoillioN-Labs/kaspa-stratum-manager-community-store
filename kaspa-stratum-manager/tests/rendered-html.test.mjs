@@ -47,6 +47,11 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /copy it manually/);
   assert.doesNotMatch(source, /Copy address|Open wallet|navigator\.clipboard/);
   assert.match(source, /system-health/);
+  assert.match(source, /mobile-nav-toggle/);
+  assert.match(source, /aria-controls="primary-navigation"/);
+  assert.match(source, /aria-expanded=\{mobileMenuOpen\}/);
+  assert.match(source, /setMobileMenuOpen\(false\)/);
+  assert.match(source, /data-label="Accepted shares"/);
   assert.match(source, /Mining gateway is online/);
   assert.doesNotMatch(source, /\["Network hashrate"/);
   assert.match(source, /control\(running\?"restart":"start"\)/);
@@ -92,3 +97,16 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /window\.location\.hostname/);
   assert.doesNotMatch(source, /umbrel\.local/i);
 });
+
+test("dashboard styles provide a readable iPhone layout", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(styles, /@media \(max-width:700px\)/);
+  assert.match(styles, /\.shell nav\.mobile-open\{display:grid/);
+  assert.match(styles, /\.mobile-nav-toggle\{display:grid/);
+  assert.match(styles, /\.history-points i:nth-last-child\(-n\+60\)/);
+  assert.match(styles, /\.miners table,\.miners tbody,\.miners tr,\.miners td\{display:block/);
+  assert.match(styles, /\.system-health \.health strong\{font-size:13px/);
+  assert.match(styles, /\.log-search input\{min-height:44px;font-size:16px/);
+  assert.match(styles, /@media \(max-width:380px\)/);
+});
+
