@@ -178,8 +178,8 @@ const donationSupportModel = (config) => {
   const kaspa = String(config.donationKaspaAddress || "").trim();
   const bitcoin = String(config.donationBitcoinAddress || "").trim();
   const currencies = [
-    ...(validKaspaDonationAddress(kaspa) ? [{ id: "kaspa", label: "Kaspa", address: kaspa, paymentUri: kaspa }] : []),
-    ...(validBitcoinDonationAddress(bitcoin) ? [{ id: "bitcoin", label: "Bitcoin", address: bitcoin, paymentUri: `bitcoin:${bitcoin}` }] : []),
+    ...(validKaspaDonationAddress(kaspa) ? [{ id: "kaspa", label: "Kaspa", address: kaspa }] : []),
+    ...(validBitcoinDonationAddress(bitcoin) ? [{ id: "bitcoin", label: "Bitcoin", address: bitcoin }] : []),
   ];
   return { enabled: currencies.length > 0, currencies };
 };
