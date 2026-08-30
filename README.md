@@ -4,6 +4,22 @@ This community store publishes **Kaspa Stratum Manager**, a local-first Umbrel
 application for running and monitoring the official Rusty Kaspa Stratum Bridge
 beside an existing Rusty Kaspad node.
 
+## Current verified release
+
+- Version: `1.0.0`
+- Image: `ghcr.io/noillion-labs/kaspa-stratum-manager:1.0.0`
+- Immutable digest:
+  `sha256:3252533fef8a2e0ac360a8348b09c0ddb673b1f18dfec97b80bd04af03bb408f`
+- Sanitized release source:
+  [`204e3e78f10e011265986a06d9cb76d4dc439946`](https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/commit/204e3e78f10e011265986a06d9cb76d4dc439946)
+- Immutable package pin:
+  [`ba351487ba277967fc03361239d88737b20584c1`](https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/commit/ba351487ba277967fc03361239d88737b20584c1)
+- Full Slow Push:
+  [successful workflow run](https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/actions/runs/33290604187)
+
+The registry image is publicly readable and the package pins both Umbrel services
+to the same immutable digest.
+
 ## Install the community store
 
 1. In Umbrel, open **App Store → Community App Stores → Add**.
