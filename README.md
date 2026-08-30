@@ -1,48 +1,79 @@
 # NoillioN Labs Umbrel Community App Store
 
-Public, sanitized milestone builds exported from private NoillioN Labs
-development repositories for installation testing on umbrelOS.
+This community store publishes **Kaspa Stratum Manager**, a local-first Umbrel
+application for running and monitoring the official Rusty Kaspa Stratum Bridge
+beside an existing Rusty Kaspad node.
 
-## Add this store to Umbrel
+## Install the community store
 
-Open **App Store → Community App Stores → Add** and enter:
+1. In Umbrel, open **App Store → Community App Stores → Add**.
+2. Enter:
 
-    https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+       https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 
-Then open the NoillioN Labs App Store and install **Kaspa Stratum Manager**.
+3. Open the **NoillioN Labs** store and install **Kaspa Stratum Manager**.
 
-## Published milestone
+## Kaspa Stratum Manager 1.0
 
-- App version: `0.3.0`
-- Architecture tested: `linux/amd64`
-- Exported private-development commit:
-  `9b3291f656190e378c40b31d0c5615858bbec069`
-- Official Rusty Kaspa Stratum Bridge: `v2.0.1`
-- Pinned Rusty Kaspa commit:
-  `cfafeb4c093fa37a303f1b9f19c58f986b870ce3`
-- Prebuilt linux/amd64 image:
-  `ghcr.io/noillion-labs/kaspa-stratum-manager:0.3.0`
-- Immutable image digest:
-  `sha256:bdc9298b15d246763cd7e95fc0f591a3860d359cd9193ffa37a0a5b95531a7d7`
+Version 1.0 provides a non-technical interface for Kaspa solo-mining operations:
 
-Umbrel pulls this public, digest-pinned runtime image. It does not compile Rusty
-Kaspa on the device during normal installation or updates.
+- live node, bridge, miner, hashrate and accepted-share status;
+- miner-level performance, confirmed-block attribution and seven-day outlooks;
+- a privacy-limited seven-day local history that continues while the GUI is closed;
+- bounded bridge and manager logs;
+- guided diagnostics with copy-safe summaries;
+- Automatic and IceRiver bridge presets with strict validation;
+- atomic settings writes, restart health checks and automatic rollback;
+- bridge lifecycle controls and a fixed LAN Stratum listener on TCP 5555.
 
-Version 0.3.0 adds sanitized persistent bridge settings, Automatic and
-IceRiver presets, strict validation, atomic writes, bounded restart checks and
-automatic last-known-good rollback. Automated validation and the linux/amd64
-image build pass. Physical settings persistence and KS7 Lite reconnection
-remain pending and are not claimed by this release record.
+The probability and average-time figures are statistical estimates based on
+observed hashrate and network conditions. They are not guarantees.
 
-The snapshot intentionally excludes private LAN addresses, wallet addresses,
-credentials, secrets, Git history and untracked development files.
+## Requirements
 
-## Development delivery workflows
+- an x86_64 Umbrel device;
+- the **Rusty Kaspad** Umbrel app installed, running and synchronized;
+- a supported ASIC miner on the same trusted local network.
 
-Routine physical testing uses the manual **Fast Push - Umbrel Test** workflow,
-which rebuilds only the application layer on top of the last verified bridge
-image and automatically publishes the next Umbrel patch package. Major
-milestones use **Slow Push - Full Release**, which retains the complete build,
-test, lint, packaging, Rust compilation, provenance and immutable-release
-gates. See
+Connect miners to your Umbrel device on Stratum TCP port **5555**. Do not expose
+that port through an internet-facing router.
+
+## Privacy and security
+
+Kaspa Stratum Manager is designed for local use behind Umbrel App Proxy. Its
+Settings interface does not read, accept or store wallet information, miner
+passwords, credentials or editable Kaspad wiring. History is stored locally
+under the app data directory and excludes miner IP addresses, wallets,
+credentials and raw diagnostics.
+
+The distributed runtime is a public linux/amd64 container image pinned by an
+immutable digest in the app package. Major releases are built from sanitized
+public source after production build, automated test, lint, packaging and
+sensitive-data checks. The release process also generates provenance and an
+SBOM.
+
+## Validation status
+
+The application has been installed on a physical x86_64 Umbrel beside Rusty
+Kaspad v2.0.1. The GUI, bridge API, node connection, lifecycle controls, full
+app restart, prebuilt updates and LAN Stratum connection have been exercised.
+An IceRiver KS7 Lite connected successfully, reported live hashrate and
+submitted accepted shares.
+
+Automated persistence, rollback and history tests pass. Extended ASIC
+stability/rejection-rate observation, physical seven-day history persistence
+verification and linux/arm64 publication remain future validation work.
+
+## Support
+
+Report reproducible problems through the public
+[issue tracker](https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/issues).
+Before sharing diagnostics, remove private addresses, wallet information,
+credentials, miner identifiers and any other sensitive data.
+
+## Release workflow
+
+Minor Umbrel test builds use **Fast Push**. Major public milestones use
+**Slow Push**, which performs the complete application and Rust bridge build,
+validation, provenance, SBOM, publication and immutable package pinning. See
 [Fast Push and Slow Push](kaspa-stratum-manager/docs/RELEASE_WORKFLOWS.md).
