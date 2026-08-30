@@ -15,7 +15,9 @@ dependencies: [rusty-kaspad]
 repo: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/issues
 port: 5556
-gallery: []
+gallery:
+  - 1.png
+  - 2.png
 releaseNotes: >-
   Minor bug fixes and improvements.
 path: ""
@@ -23,3 +25,4 @@ defaultUsername: ""
 defaultPassword: ""
 submitter: Nathan Oldaker
 submission: ""
+
