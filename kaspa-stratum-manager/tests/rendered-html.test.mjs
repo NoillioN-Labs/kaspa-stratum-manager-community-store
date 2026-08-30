@@ -36,7 +36,10 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /App version/);
   assert.match(source, /Bridge version/);
   assert.match(source, /Developed by/);
-  assert.match(source, /NoillioN-Labs/);
+  assert.match(source, />NoillioN Labs</);
+  assert.match(source, /Support development/);
+  assert.match(source, /api\/manager\/support/);
+  assert.match(source, /Copy address/);
   assert.match(source, /system-health/);
   assert.match(source, /Mining gateway is online/);
   assert.doesNotMatch(source, /\["Network hashrate"/);
@@ -83,4 +86,3 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /window\.location\.hostname/);
   assert.doesNotMatch(source, /umbrel\.local/i);
 });
-

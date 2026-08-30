@@ -39,6 +39,8 @@ FROM node:24.19.0-bookworm-slim AS runtime
 ARG RUSTY_KASPA_VERSION
 ARG RUSTY_KASPA_COMMIT
 ARG APP_VERSION
+ARG KSM_DONATION_KASPA_ADDRESS=""
+ARG KSM_DONATION_BITCOIN_ADDRESS=""
 LABEL org.opencontainers.image.source="https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store" \
       org.opencontainers.image.title="Kaspa Stratum Manager" \
       org.opencontainers.image.version="${APP_VERSION}" \
@@ -56,7 +58,9 @@ RUN chmod 0755 /usr/local/bin/stratum-bridge /usr/local/bin/kaspa-manager-entryp
     && mkdir -p /data \
     && chown -R node:node /data
 USER node
-ENV NODE_ENV=production PORT=8080
+ENV NODE_ENV=production PORT=8080 \
+    KSM_DONATION_KASPA_ADDRESS="${KSM_DONATION_KASPA_ADDRESS}" \
+    KSM_DONATION_BITCOIN_ADDRESS="${KSM_DONATION_BITCOIN_ADDRESS}"
 EXPOSE 8080 8081 3030 5555 2114
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/kaspa-manager-entrypoint"]
 CMD ["npm", "run", "start", "--", "--hostname", "0.0.0.0", "--port", "8080"]
