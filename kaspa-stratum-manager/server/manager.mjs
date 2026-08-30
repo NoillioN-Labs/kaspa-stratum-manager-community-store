@@ -149,6 +149,7 @@ export const loadConfig = (env = process.env) => {
     bridgeVersion: env.BRIDGE_VERSION || "unknown",
     profile: env.APP_PROFILE || "windows-development",
     nodeEndpoint: parseEndpoint(env.KASPA_NODE_GRPC || "127.0.0.1:16110", 16110),
+    stratumEndpoint: parseEndpoint(env.STRATUM_ENDPOINT || "127.0.0.1:5555", 5555),
     bridgeApiUrl: (env.BRIDGE_API_URL || "http://127.0.0.1:3030").replace(/\/$/, ""),
     bridgeCommand: env.BRIDGE_COMMAND || "",
     bridgeArgs,
@@ -225,7 +226,10 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     const url = new URL(req.url, "http://manager.local");
     try {
       if (req.method === "GET" && (url.pathname === "/healthz" || url.pathname === "/api/manager/status")) {
-        const node = await tcpProbe(config.nodeEndpoint, config.probeTimeoutMs);
+        const [node, stratum] = await Promise.all([
+          tcpProbe(config.nodeEndpoint, config.probeTimeoutMs),
+          tcpProbe(config.stratumEndpoint || { host: "127.0.0.1", port: 5555 }, config.probeTimeoutMs),
+        ]);
         let bridgeApi = { reachable: false, error: null, status: null };
         try {
           bridgeApi = { reachable: true, error: null, status: await fetchJson(`${config.bridgeApiUrl}/api/status`, config.probeTimeoutMs) };
@@ -236,6 +240,7 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
           bridgeVersion: config.bridgeVersion || "unknown",
           profile: config.profile,
           node: { endpoint: `${config.nodeEndpoint.host}:${config.nodeEndpoint.port}`, ...node },
+          stratum: { port: config.stratumEndpoint?.port || 5555, ...stratum },
           bridge: { ...supervisor.state(), api_url: config.bridgeApiUrl, api: bridgeApi },
           checked_at: new Date().toISOString(),
         };
