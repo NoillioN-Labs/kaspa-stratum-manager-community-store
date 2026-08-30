@@ -7,7 +7,7 @@ services:
       APP_PORT: 8080
 
   web:
-    image: ghcr.io/noillion-labs/kaspa-stratum-manager:fast@sha256:5adbc7218a3f60c50d214c246cba6596032988b48ea6f530edcfe3c699233dbc
+    image: ghcr.io/noillion-labs/kaspa-stratum-manager:fast@sha256:3c2b6e4ccc0b51ca562fe56d8bde14f4875dfa482dae7eea0364b4f7fc7dacd7
     command: ["npm", "run", "start", "--", "--hostname", "0.0.0.0", "--port", "8080"]
     restart: on-failure
     stop_grace_period: 30s
@@ -22,7 +22,7 @@ services:
       start_period: 20s
 
   manager:
-    image: ghcr.io/noillion-labs/kaspa-stratum-manager:fast@sha256:5adbc7218a3f60c50d214c246cba6596032988b48ea6f530edcfe3c699233dbc
+    image: ghcr.io/noillion-labs/kaspa-stratum-manager:fast@sha256:3c2b6e4ccc0b51ca562fe56d8bde14f4875dfa482dae7eea0364b4f7fc7dacd7
     command: ["node", "server/manager.mjs"]
     restart: on-failure
     stop_grace_period: 30s
@@ -30,7 +30,7 @@ services:
     ports: ["5555:5555/tcp"]
     volumes: ["${APP_DATA_DIR}/data:/data"]
     environment:
-      APP_VERSION: "0.3.7"
+      APP_VERSION: "0.3.8"
       BRIDGE_VERSION: "2.0.1"
       APP_PROFILE: umbrel
       MANAGER_HOST: 0.0.0.0
