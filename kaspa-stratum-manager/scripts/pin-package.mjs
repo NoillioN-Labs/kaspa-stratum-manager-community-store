@@ -25,7 +25,10 @@ assert.equal([...compose.matchAll(new RegExp(image.replace(/[.*+?^${}()|[\]\\]/g
 assert.match(compose, /^\s+APP_VERSION: "[^"]+"$/m, "Manager environment must declare APP_VERSION");
 compose = compose.replace(/^(\s+APP_VERSION:)\s*"[^"]+"$/m, `$1 "${version}"`);
 manifest = manifest.replace(/^version: ".*"$/m, `version: "${version}"`);
-manifest = manifest.replace(/releaseNotes: >-[\s\S]*?\npath:/m, `releaseNotes: >-\n  ${mode === "fast" ? "Fast Push test build" : "Full validated release"} from sanitized public source ${sourceSha.slice(0, 12)}.\npath:`);
+const notes = mode === "fast"
+  ? `Fast Push test build from sanitized public source ${sourceSha.slice(0, 12)}.`
+  : `Version ${version} delivers the complete Overview, Miners, Logs, Diagnostics and Settings experience, including safe bridge configuration, automatic rollback, confirmed-block attribution and privacy-limited seven-day mining history.`;
+manifest = manifest.replace(/releaseNotes: >-[\s\S]*?\npath:/m, `releaseNotes: >-\n  ${notes}\npath:`);
 
 await writeFile(composeUrl, compose);
 await writeFile(manifestUrl, manifest);
@@ -39,4 +42,3 @@ if (mode === "slow") {
   await writeFile(fastDockerfileUrl, fastDockerfile);
 }
 console.log(`${mode} package pinned as ${version}: ${image}`);
-
