@@ -33,6 +33,8 @@ const testConfig = (directory) => ({
   settingsHealthTimeoutMs:50, settingsHealthIntervalMs:1,
   historyPath:path.join(directory,"mining-history.json"),
   historyRetentionMs:7*24*60*60*1000, historySampleIntervalMs:60_000, historyFlushIntervalMs:300_000,
+  metricsPath:path.join(directory,"dashboard-metrics.json"),
+  metricsRetentionMs:10*60*1000, metricsSampleIntervalMs:5_000, metricsFlushIntervalMs:30_000,
 });
 const fakeSupervisor = (restart = async () => {}) => ({
   managed:true,
@@ -153,6 +155,26 @@ test("returns sanitized durable mining history and block outlook", async (t) => 
   assert.equal(body.workers[0].blocksFound,1);
   assert.ok(body.expectedBlocksNextWindow>0);
   assert.doesNotMatch(JSON.stringify(body),/wallet|private|block-a/);
+});
+
+test("returns persistent rolling dashboard metrics without private worker data", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-metrics-"));
+  const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor() });
+  await manager.metrics.record({
+    activeWorkers:1,
+    totalShares:42,
+    workers:[{worker:"RIG01",wallet:"private",hashrateGhs:4120}],
+  }, Date.now());
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response=await fetch(`http://127.0.0.1:${port}/api/manager/metrics`);
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.acceptedSharesTotal,42);
+  assert.equal(body.samples.length,1);
+  assert.equal(body.samples[0].hashrateHs,4.12e12);
+  assert.equal(body.samples[0].connectedMiners,1);
+  assert.doesNotMatch(JSON.stringify(body),/wallet|private|RIG01/);
 });
 
 test("reads only the sanitized settings model", async (t) => {
