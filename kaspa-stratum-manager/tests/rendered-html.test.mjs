@@ -58,6 +58,12 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Newest messages appear first/);
   assert.match(source, /Kept in memory only/);
   assert.match(source, /aria-label="Search logs"/);
+  assert.match(source, /Everything is ready for mining/);
+  assert.match(source, /Live service checks/);
+  assert.match(source, /Stratum listener/);
+  assert.match(source, /TCP port 5555/);
+  assert.match(source, /Runtime details/);
+  assert.match(source, /If something is not working/);
   assert.match(source, /aria-label="Stratum port"[^>]*disabled readOnly/);
   assert.match(source, /window\.location\.hostname/);
   assert.doesNotMatch(source, /umbrel\.local/i);
