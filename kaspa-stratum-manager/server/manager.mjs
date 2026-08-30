@@ -8,6 +8,7 @@ import {
   atomicWrite, parseBridgeSettings, readSettingsFile, sanitizedSettingsModel, updateBridgeYaml, validateSettings,
 } from "./settings.mjs";
 import { MiningHistoryStore, SEVEN_DAYS_MS } from "./history.mjs";
+import { DashboardMetricsStore, TEN_MINUTES_MS } from "./metrics.mjs";
 
 const json = (res, status, body, origin = "") => {
   res.writeHead(status, {
@@ -166,6 +167,10 @@ export const loadConfig = (env = process.env) => {
     historyRetentionMs: Number(env.HISTORY_RETENTION_MS || SEVEN_DAYS_MS),
     historySampleIntervalMs: Number(env.HISTORY_SAMPLE_INTERVAL_MS || 60000),
     historyFlushIntervalMs: Number(env.HISTORY_FLUSH_INTERVAL_MS || 300000),
+    metricsPath: env.DASHBOARD_METRICS_PATH || `${env.DATA_DIR || "/data"}/dashboard-metrics.json`,
+    metricsRetentionMs: Number(env.DASHBOARD_METRICS_RETENTION_MS || TEN_MINUTES_MS),
+    metricsSampleIntervalMs: Number(env.DASHBOARD_METRICS_SAMPLE_INTERVAL_MS || 5000),
+    metricsFlushIntervalMs: Number(env.DASHBOARD_METRICS_FLUSH_INTERVAL_MS || 30000),
     donationKaspaAddress: env.KSM_DONATION_KASPA_ADDRESS || "",
     donationBitcoinAddress: env.KSM_DONATION_BITCOIN_ADDRESS || "",
     allowedOrigin: env.DEV_ALLOWED_ORIGIN || "http://localhost:3000",
@@ -195,8 +200,17 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     flushIntervalMs: config.historyFlushIntervalMs,
     onError: (message) => logs.add("manager", message),
   });
+  const metrics = dependencies.metricsStore || new DashboardMetricsStore({
+    path: config.metricsPath || "/data/dashboard-metrics.json",
+    retentionMs: config.metricsRetentionMs || TEN_MINUTES_MS,
+    sampleIntervalMs: config.metricsSampleIntervalMs || 5_000,
+    flushIntervalMs: config.metricsFlushIntervalMs || 30_000,
+    onError: (message) => logs.add("manager", message),
+  });
   let historyTimer = null;
   let historySample = null;
+  let metricsTimer = null;
+  let metricsSample = null;
   const serializeSettingsWrite = serialQueue();
   const waitForBridgeHealthy = dependencies.waitForBridgeHealthy || (async () => {
     const deadline = Date.now() + config.settingsHealthTimeoutMs;
@@ -259,6 +273,23 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     await historySample?.catch(() => {});
     await history.close().catch((error) => logs.add("manager", `Mining history could not be saved: ${error.message}`));
   };
+  const sampleMetrics = async () => {
+    try { await metrics.record(await fetchBridgeStats()); }
+    catch (error) { logs.add("manager", `Dashboard metrics sample skipped: ${error.message}`); }
+  };
+  const startMetrics = async () => {
+    if (metricsTimer) return;
+    metricsSample = sampleMetrics();
+    await metricsSample;
+    metricsTimer = setInterval(() => { metricsSample = sampleMetrics(); }, config.metricsSampleIntervalMs || 5_000);
+    metricsTimer.unref?.();
+  };
+  const stopMetrics = async () => {
+    if (metricsTimer) clearInterval(metricsTimer);
+    metricsTimer = null;
+    await metricsSample?.catch(() => {});
+    await metrics.close().catch((error) => logs.add("manager", `Dashboard metrics could not be saved: ${error.message}`));
+  };
 
   const handler = async (req, res) => {
     const origin = req.headers.origin === config.allowedOrigin ? config.allowedOrigin : "";
@@ -299,6 +330,9 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
       if (req.method === "GET" && url.pathname === "/api/manager/history") {
         return json(res, 200, await history.summary(), origin);
       }
+      if (req.method === "GET" && url.pathname === "/api/manager/metrics") {
+        return json(res, 200, await metrics.summary(), origin);
+      }
       if (req.method === "GET" && url.pathname === "/api/manager/support") {
         return json(res, 200, donationSupportModel(config), origin);
       }
@@ -325,9 +359,9 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
   };
 
   return {
-    config, logs, supervisor, history, sampleHistory, startHistory, stopHistory,
+    config, logs, supervisor, history, metrics, sampleHistory, startHistory, stopHistory, sampleMetrics, startMetrics, stopMetrics,
     server: http.createServer(handler),
-    async close() { await stopHistory(); await supervisor.stop(); },
+    async close() { await Promise.all([stopHistory(), stopMetrics()]); await supervisor.stop(); },
   };
 };
 
@@ -339,7 +373,7 @@ if (isMain) {
     if (manager.supervisor.managed) {
       try { await manager.supervisor.start(); } catch (error) { manager.logs.add("manager", error.message); }
     }
-    await manager.startHistory();
+    await Promise.all([manager.startHistory(), manager.startMetrics()]);
   });
   const shutdown = async () => { await manager.close(); manager.server.close(() => process.exit(0)); };
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);
