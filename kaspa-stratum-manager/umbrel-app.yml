@@ -16,8 +16,8 @@ repo: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
 support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/issues
 port: 5556
 gallery:
-  - 1.png
-  - 2.png
+  - https://raw.githubusercontent.com/NoillioN-Labs/kaspa-stratum-manager-community-store/main/kaspa-stratum-manager/1.png
+  - https://raw.githubusercontent.com/NoillioN-Labs/kaspa-stratum-manager-community-store/main/kaspa-stratum-manager/2.png
 releaseNotes: >-
   Minor bug fixes and improvements.
 path: ""
