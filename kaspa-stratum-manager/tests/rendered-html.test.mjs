@@ -39,7 +39,8 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, />NoillioN Labs</);
   assert.match(source, /Support development/);
   assert.match(source, /api\/manager\/support/);
-  assert.match(source, /Copy address/);
+  assert.match(source, /copy it manually/);
+  assert.doesNotMatch(source, /Copy address|Open wallet|navigator\.clipboard/);
   assert.match(source, /system-health/);
   assert.match(source, /Mining gateway is online/);
   assert.doesNotMatch(source, /\["Network hashrate"/);

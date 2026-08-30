@@ -100,10 +100,7 @@
 .donation-popover>p{margin:5px 0 10px;color:#657770;line-height:1.45}
 .donation-popover article{display:grid;gap:5px;padding:9px 0;border-top:1px solid #e4ece8}
 .donation-popover article>span{font-weight:800;color:#17392f}
-.donation-popover code{display:block;max-width:100%;padding:7px 8px;border-radius:7px;background:#f1f6f4;color:#315249;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
-.donation-popover article>div{display:flex;gap:7px}
-.donation-popover article button,.donation-popover article a{border:1px solid #b7cec5;border-radius:7px;background:#fff;color:#248a6b;padding:5px 8px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}
-.donation-popover article a{background:#e3f5ef}
+.donation-popover code{display:block;max-width:100%;padding:8px;border-radius:7px;background:#f1f6f4;color:#315249;white-space:normal;overflow-wrap:anywhere;word-break:break-all;font-size:10px;line-height:1.45;cursor:text;user-select:text}
 
 @media (min-width:981px){
  .system-health{display:grid;grid-template-rows:38px repeat(4,minmax(0,1fr));overflow:hidden}

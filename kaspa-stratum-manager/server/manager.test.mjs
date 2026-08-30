@@ -119,8 +119,8 @@ test("returns only validated public donation addresses", async (t) => {
   assert.equal(response.status,200);
   assert.equal(body.enabled,true);
   assert.deepEqual(body.currencies.map(({id})=>id),["kaspa","bitcoin"]);
-  assert.equal(body.currencies[0].paymentUri,body.currencies[0].address);
-  assert.equal(body.currencies[1].paymentUri,`bitcoin:${body.currencies[1].address}`);
+  assert.deepEqual(Object.keys(body.currencies[0]).sort(),["address","id","label"]);
+  assert.deepEqual(Object.keys(body.currencies[1]).sort(),["address","id","label"]);
 });
 
 test("hides malformed donation configuration", async (t) => {
