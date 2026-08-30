@@ -2,7 +2,7 @@ manifestVersion: 1.1
 id: kaspa-stratum-manager
 category: kaspa
 name: Kaspa Stratum Manager
-version: "0.3.10"
+version: "1.0.0"
 tagline: Manage Kaspa solo mining locally
 icon: https://raw.githubusercontent.com/NoillioN-Labs/kaspa-stratum-manager-community-store/main/kaspa-stratum-manager/icon.svg
 description: >-
@@ -17,8 +17,7 @@ support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/
 port: 5556
 gallery: []
 releaseNotes: >-
-  Current public test package. Version 1.0.0 will be pinned by the full
-  validated release workflow.
+  Version 1.0.0 delivers the complete Overview, Miners, Logs, Diagnostics and Settings experience, including safe bridge configuration, automatic rollback, confirmed-block attribution and privacy-limited seven-day mining history.
 path: ""
 defaultUsername: ""
 defaultPassword: ""
