@@ -47,6 +47,8 @@ jobs:
 
       - name: Run full validation
         working-directory: kaspa-stratum-manager
+        env:
+          KSM_PACKAGE_CHANNEL: fast
         run: |
           npm test
           npm run lint
