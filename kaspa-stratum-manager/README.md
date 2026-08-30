@@ -67,8 +67,8 @@ accepted shares.
 
 Automated settings persistence, rollback and seven-day history tests pass.
 Physical version 1.0.0 also retains accurate seven-day history through a
-complete app restart, and all five pages work correctly. Changed Settings
-persistence, explicit KS7 Lite reconnection, extended ASIC
+complete app restart, and all five pages work correctly. The KS7 Lite reconnected automatically, and saved Settings—including a
+deliberately changed setting—persisted across restart. Extended ASIC
 stability/rejection-rate monitoring and linux/arm64 publication are not yet
 claimed.
 
