@@ -26,10 +26,15 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /No live miner data/);
   assert.match(source, /Miner hashrate/);
   assert.match(source, /historyAverage/);
-  assert.match(source, /Live average/);
+  assert.match(source, /10-minute average/);
   assert.match(source, /120 readings/);
-  assert.match(source, /5 sec each/);
+  assert.match(source, /retained across visits/);
   assert.match(source, /setInterval\(refresh,5000\)/);
+  assert.match(source, /api\/manager\/metrics/);
+  assert.match(source, /setInterval\(loadDashboardMetrics,5_000\)/);
+  assert.match(source, /Recorded by manager/);
+  assert.match(source, /Recorded across bridge sessions/);
+  assert.doesNotMatch(source, /setHashrateHistory/);
   assert.match(source, /combinedMinerHashrate/);
   assert.match(source, /workers\.slice\(0,5\)/);
   assert.match(source, /Showing up to 5 miners/);

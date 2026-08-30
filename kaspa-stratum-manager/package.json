@@ -13,7 +13,7 @@
     "manager:dev": "node --env-file-if-exists=.env.local server/manager.mjs",
     "test:manager": "node --test server/manager.test.mjs",
     "test:packaging": "node scripts/validate-packaging.mjs",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs server/manager.test.mjs server/history.test.mjs && npm run test:packaging",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs server/manager.test.mjs server/history.test.mjs server/metrics.test.mjs && npm run test:packaging",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
   },
@@ -44,4 +44,3 @@
   "type": "module",
   "displayName": "Kaspa Stratum Manager"
 }
-
