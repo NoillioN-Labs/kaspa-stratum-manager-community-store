@@ -53,6 +53,12 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Complete live worker list/);
   assert.match(source, /Live data refreshes every 5 seconds/);
   assert.match(source, /Connect miners to your Umbrel/);
+  assert.match(source, /Blocks found/);
+  assert.match(source, /Last block/);
+  assert.match(source, /blocks are confirmed by your node/i);
+  assert.match(source, /confirms them blue/);
+  assert.match(source, /worker\.blocks/);
+  assert.match(source, /stats\?\.blocks/);
   assert.match(source, /Live application logs/);
   assert.match(source, /api\/manager\/logs\?limit=200/);
   assert.match(source, /Newest messages appear first/);
