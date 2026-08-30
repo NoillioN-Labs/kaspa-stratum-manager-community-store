@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [dockerfile, compose, manifest, config, route, entrypoint, preStart, packageLock, manager, settings, history] = await Promise.all([
+const [dockerfile, compose, manifest, config, route, entrypoint, preStart, packageLock, manager, settings, history, dashboardMetrics] = await Promise.all([
   read("Dockerfile"), read("docker-compose.yml"), read("umbrel-app.yml"),
   read("config/bridge.yaml"),
   read("app/api/manager/[...path]/route.ts"), read("docker/entrypoint.sh"), read("hooks/pre-start"),
-  read("package-lock.json"), read("server/manager.mjs"), read("server/settings.mjs"), read("server/history.mjs"),
+  read("package-lock.json"), read("server/manager.mjs"), read("server/settings.mjs"), read("server/history.mjs"), read("server/metrics.mjs"),
 ]);
 
 const parsedPackageLock = JSON.parse(packageLock);
@@ -27,6 +27,8 @@ assert.equal(pinnedImages.length, 2);
 assert.equal(pinnedImages[0], pinnedImages[1]);
 assert.ok(milestoneVersion, "Umbrel manifest must contain a semantic version");
 assert.match(manifest, /^icon: https:\/\/raw\.githubusercontent\.com\/NoillioN-Labs\/kaspa-stratum-manager-community-store\/main\/kaspa-stratum-manager\/icon\.svg$/m);
+assert.match(manifest, /releaseNotes: >-\r?\n  Minor bug fixes and improvements\./);
+assert.doesNotMatch(manifest, /fast push|slow push|sanitized public source|test build/i);
 assert.match(compose, new RegExp(`^\\s+APP_VERSION: "${milestoneVersion.replace(/\./g, "\\.")}"$`, "m"));
 assert.match(compose, /^\s+BRIDGE_VERSION: "2\.0\.1"$/m);
 const expectedImageTag = process.env.KSM_PACKAGE_CHANNEL === "fast" ? "fast" : milestoneVersion;
@@ -51,6 +53,9 @@ assert.match(dockerfile, /ARG KSM_DONATION_BITCOIN_ADDRESS/);
 assert.match(history, /SEVEN_DAYS_MS/);
 assert.match(history, /probabilityNextWindow/);
 assert.doesNotMatch(history, /wallet|password|credential/i);
+assert.match(dashboardMetrics, /TEN_MINUTES_MS/);
+assert.match(dashboardMetrics, /acceptedSharesTotal/);
+assert.doesNotMatch(dashboardMetrics, /wallet|password|credential/i);
 assert.match(settings, /The Umbrel miner port is protected at 5555/);
 assert.match(settings, /This setting is not editable/);
 assert.doesNotMatch(settings, /kaspad_address|KASPA_NODE_GRPC/);

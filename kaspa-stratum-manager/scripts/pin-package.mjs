@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 
-const [mode, digest, requestedVersion, sourceSha = "unknown"] = process.argv.slice(2);
+const [mode, digest, requestedVersion] = process.argv.slice(2);
 assert.ok(mode === "fast" || mode === "slow", "Mode must be fast or slow");
 assert.match(digest ?? "", /^sha256:[a-f0-9]{64}$/, "A valid immutable digest is required");
 
@@ -25,9 +25,7 @@ assert.equal([...compose.matchAll(new RegExp(image.replace(/[.*+?^${}()|[\]\\]/g
 assert.match(compose, /^\s+APP_VERSION: "[^"]+"$/m, "Manager environment must declare APP_VERSION");
 compose = compose.replace(/^(\s+APP_VERSION:)\s*"[^"]+"$/m, `$1 "${version}"`);
 manifest = manifest.replace(/^version: ".*"$/m, `version: "${version}"`);
-const notes = mode === "fast"
-  ? `Fast Push test build from sanitized public source ${sourceSha.slice(0, 12)}.`
-  : `Version ${version} delivers the complete Overview, Miners, Logs, Diagnostics and Settings experience, including safe bridge configuration, automatic rollback, confirmed-block attribution and privacy-limited seven-day mining history.`;
+const notes = "Minor bug fixes and improvements.";
 manifest = manifest.replace(/releaseNotes: >-[\s\S]*?\npath:/m, `releaseNotes: >-\n  ${notes}\npath:`);
 
 await writeFile(composeUrl, compose);
