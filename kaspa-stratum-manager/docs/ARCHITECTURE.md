@@ -16,8 +16,13 @@ mapped from `${APP_DATA_DIR}/data`.
 
 The bridge reports worker hashrate in GH/s and network hashrate in H/s. The
 overview converts worker readings to H/s, sums active workers and selects a
-human-readable GH/s or TH/s unit. The overview chart remains an intentionally
-browser-local live session.
+human-readable GH/s or TH/s unit. The manager records a rolling ten-minute
+dashboard series every five seconds in `/data/dashboard-metrics.json`. The
+series and cumulative accepted-share counter are available immediately after
+the browser opens and survive browser, manager and bridge restarts. Writes are
+atomic and rate-limited to reduce storage activity. Only combined hashrate,
+connected-miner count and share totals are stored; wallet and worker identity
+are excluded from this short-term file.
 
 The manager independently samples bridge statistics once per minute, even when
 the GUI is closed. It retains seven days of per-worker hashrate, network
@@ -109,4 +114,3 @@ separate acceptance gate and is not inferred from automation.
 Private addresses and credentials belong only in untracked local configuration
 or an interactive shell. They are not part of the deployment contract or the
 repository.
-
