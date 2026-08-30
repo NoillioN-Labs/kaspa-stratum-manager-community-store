@@ -66,7 +66,9 @@ An IceRiver KS7 Lite has connected, reported live hashrate and submitted
 accepted shares.
 
 Automated settings persistence, rollback and seven-day history tests pass.
-Physical seven-day persistence observation, extended ASIC
+Physical version 1.0.0 also retains accurate seven-day history through a
+complete app restart, and all five pages work correctly. Changed Settings
+persistence, explicit KS7 Lite reconnection, extended ASIC
 stability/rejection-rate monitoring and linux/arm64 publication are not yet
 claimed.
 
