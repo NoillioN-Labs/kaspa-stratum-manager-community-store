@@ -79,6 +79,28 @@ test("blocks process controls in an unmanaged Windows profile", async (t) => {
   assert.match((await response.json()).error,/disabled/);
 });
 
+test("returns bounded in-memory manager and bridge logs", async (t) => {
+  const manager = createManager({
+    listenHost:"127.0.0.1", listenPort:0, profile:"test",
+    nodeEndpoint:{host:"127.0.0.1",port:1}, bridgeApiUrl:"http://127.0.0.1:1",
+    bridgeCommand:"", bridgeArgs:[], bridgeWorkingDirectory:"", bridgeEnv:{},
+    probeTimeoutMs:50, stopTimeoutMs:50, allowedOrigin:"http://localhost:3000",
+  });
+  manager.logs.add("manager","Manager ready");
+  manager.logs.add("bridge","Worker connected\nShare accepted");
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response=await fetch(`http://127.0.0.1:${port}/api/manager/logs?limit=2`);
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.lines.length,2);
+  assert.deepEqual(body.lines.map(({source,line})=>({source,line})),[
+    {source:"bridge",line:"Worker connected"},
+    {source:"bridge",line:"Share accepted"},
+  ]);
+  assert.ok(body.lines.every(({timestamp})=>!Number.isNaN(Date.parse(timestamp))));
+});
+
 test("reads only the sanitized settings model", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-settings-read-"));
   await writeFile(path.join(directory,"config.yaml"), defaultYaml);
