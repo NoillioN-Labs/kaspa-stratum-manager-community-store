@@ -16,9 +16,25 @@ mapped from `${APP_DATA_DIR}/data`.
 
 The bridge reports worker hashrate in GH/s and network hashrate in H/s. The
 overview converts worker readings to H/s, sums active workers and selects a
-human-readable GH/s or TH/s unit. Because the bridge API does not provide a
-historical series, the current chart is explicitly a browser-local live session
-and does not claim durable 24-hour history.
+human-readable GH/s or TH/s unit. The overview chart remains an intentionally
+browser-local live session.
+
+The manager independently samples bridge statistics once per minute, even when
+the GUI is closed. It retains seven days of per-worker hashrate, network
+hashrate, network difficulty and network block-count observations in
+`/data/mining-history.json`. The file is atomically replaced at bounded
+intervals and immediately after a new confirmed block is observed. Retention is
+pruned on read and write. Stored history contains worker/instance labels and
+block hashes for event deduplication, but never wallet addresses, miner IPs,
+credentials or raw diagnostics. The sanitized history API does not return block
+hashes.
+
+Expected blocks are estimated for each observed interval from the miner's share
+of network hashrate multiplied by the network block-count change. The seven-day
+forecast extrapolates the measured expected-block rate; the chance of at least
+one block uses the Poisson model `1 - exp(-expectedBlocks)`. Long sampling gaps
+are excluded instead of assuming the miner remained online. These figures are
+statistical estimates, not payout or block guarantees.
 
 ## Pinned bridge supply chain
 
@@ -80,7 +96,7 @@ separate acceptance gate and is not inferred from automation.
 
 - `windows-development`: manager runs on the Windows 11 development computer,
   uses an endpoint supplied through untracked local settings, and does not
-  control a bridge process by default.
+  default.
 - Windows Docker production validation: the complete `linux/amd64` image runs
   locally in the `umbrel` profile against the LAN Rusty Kaspad service. This
   profile has passed GUI, bridge API, statistics, Stratum and lifecycle-control
@@ -93,3 +109,4 @@ separate acceptance gate and is not inferred from automation.
 Private addresses and credentials belong only in untracked local configuration
 or an interactive shell. They are not part of the deployment contract or the
 repository.
+

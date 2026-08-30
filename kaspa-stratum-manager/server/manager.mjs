@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import {
   atomicWrite, parseBridgeSettings, readSettingsFile, sanitizedSettingsModel, updateBridgeYaml, validateSettings,
 } from "./settings.mjs";
+import { MiningHistoryStore, SEVEN_DAYS_MS } from "./history.mjs";
 
 const json = (res, status, body, origin = "") => {
   res.writeHead(status, {
@@ -161,6 +162,10 @@ export const loadConfig = (env = process.env) => {
     settingsBackupPath: env.BRIDGE_CONFIG_BACKUP_PATH || `${env.DATA_DIR || "/data"}/config.last-good.yaml`,
     settingsHealthTimeoutMs: Number(env.SETTINGS_HEALTH_TIMEOUT_MS || 15000),
     settingsHealthIntervalMs: Number(env.SETTINGS_HEALTH_INTERVAL_MS || 500),
+    historyPath: env.MINING_HISTORY_PATH || `${env.DATA_DIR || "/data"}/mining-history.json`,
+    historyRetentionMs: Number(env.HISTORY_RETENTION_MS || SEVEN_DAYS_MS),
+    historySampleIntervalMs: Number(env.HISTORY_SAMPLE_INTERVAL_MS || 60000),
+    historyFlushIntervalMs: Number(env.HISTORY_FLUSH_INTERVAL_MS || 300000),
     allowedOrigin: env.DEV_ALLOWED_ORIGIN || "http://localhost:3000",
   };
 };
@@ -168,6 +173,16 @@ export const loadConfig = (env = process.env) => {
 export const createManager = (config = loadConfig(), dependencies = {}) => {
   const logs = new RingLog();
   const supervisor = dependencies.supervisor || new BridgeSupervisor(config, logs);
+  const fetchBridgeStats = dependencies.fetchBridgeStats || (() => fetchJson(`${config.bridgeApiUrl}/api/stats`, config.probeTimeoutMs));
+  const history = dependencies.historyStore || new MiningHistoryStore({
+    path: config.historyPath,
+    retentionMs: config.historyRetentionMs,
+    sampleIntervalMs: config.historySampleIntervalMs,
+    flushIntervalMs: config.historyFlushIntervalMs,
+    onError: (message) => logs.add("manager", message),
+  });
+  let historyTimer = null;
+  let historySample = null;
   const serializeSettingsWrite = serialQueue();
   const waitForBridgeHealthy = dependencies.waitForBridgeHealthy || (async () => {
     const deadline = Date.now() + config.settingsHealthTimeoutMs;
@@ -213,6 +228,24 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     parseBridgeSettings(source),
   ).settings;
 
+  const sampleHistory = async () => {
+    try { await history.record(await fetchBridgeStats()); }
+    catch (error) { logs.add("manager", `Mining history sample skipped: ${error.message}`); }
+  };
+  const startHistory = async () => {
+    if (historyTimer) return;
+    historySample = sampleHistory();
+    await historySample;
+    historyTimer = setInterval(() => { historySample = sampleHistory(); }, config.historySampleIntervalMs);
+    historyTimer.unref?.();
+  };
+  const stopHistory = async () => {
+    if (historyTimer) clearInterval(historyTimer);
+    historyTimer = null;
+    await historySample?.catch(() => {});
+    await history.close().catch((error) => logs.add("manager", `Mining history could not be saved: ${error.message}`));
+  };
+
   const handler = async (req, res) => {
     const origin = req.headers.origin === config.allowedOrigin ? config.allowedOrigin : "";
     if (req.method === "OPTIONS") {
@@ -247,7 +280,10 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
         return json(res, url.pathname === "/healthz" && !body.healthy ? 503 : 200, body, origin);
       }
       if (req.method === "GET" && url.pathname === "/api/manager/stats") {
-        return json(res, 200, await fetchJson(`${config.bridgeApiUrl}/api/stats`, config.probeTimeoutMs), origin);
+        return json(res, 200, await fetchBridgeStats(), origin);
+      }
+      if (req.method === "GET" && url.pathname === "/api/manager/history") {
+        return json(res, 200, await history.summary(), origin);
       }
       if (req.method === "GET" && url.pathname === "/api/manager/logs") {
         return json(res, 200, { lines: logs.list(Number(url.searchParams.get("limit") || 200)) }, origin);
@@ -272,9 +308,9 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
   };
 
   return {
-    config, logs, supervisor,
+    config, logs, supervisor, history, sampleHistory, startHistory, stopHistory,
     server: http.createServer(handler),
-    async close() { await supervisor.stop(); },
+    async close() { await stopHistory(); await supervisor.stop(); },
   };
 };
 
@@ -286,6 +322,7 @@ if (isMain) {
     if (manager.supervisor.managed) {
       try { await manager.supervisor.start(); } catch (error) { manager.logs.add("manager", error.message); }
     }
+    await manager.startHistory();
   });
   const shutdown = async () => { await manager.close(); manager.server.close(() => process.exit(0)); };
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);

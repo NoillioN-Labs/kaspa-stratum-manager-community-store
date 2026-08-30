@@ -59,6 +59,15 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /confirms them blue/);
   assert.match(source, /worker\.blocks/);
   assert.match(source, /stats\?\.blocks/);
+  assert.match(source, /api\/manager\/history/);
+  assert.match(source, /7-day block outlook/);
+  assert.match(source, /Chance in next 7 days/);
+  assert.match(source, /Estimated average wait/);
+  assert.match(source, /Average network hashrate/);
+  assert.match(source, /Network blocks observed/);
+  assert.match(source, /Per-miner 7-day outlook/);
+  assert.match(source, /Probability estimate/i);
+  assert.match(source, /not a promise/i);
   assert.match(source, /Live application logs/);
   assert.match(source, /api\/manager\/logs\?limit=200/);
   assert.match(source, /Newest messages appear first/);

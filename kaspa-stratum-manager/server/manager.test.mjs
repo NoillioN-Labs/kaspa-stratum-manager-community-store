@@ -31,6 +31,8 @@ const testConfig = (directory) => ({
   settingsPath:path.join(directory,"config.yaml"),
   settingsBackupPath:path.join(directory,"config.last-good.yaml"),
   settingsHealthTimeoutMs:50, settingsHealthIntervalMs:1,
+  historyPath:path.join(directory,"mining-history.json"),
+  historyRetentionMs:7*24*60*60*1000, historySampleIntervalMs:60_000, historyFlushIntervalMs:300_000,
 });
 const fakeSupervisor = (restart = async () => {}) => ({
   managed:true,
@@ -102,6 +104,26 @@ test("returns bounded in-memory manager and bridge logs", async (t) => {
     {source:"bridge",line:"Share accepted"},
   ]);
   assert.ok(body.lines.every(({timestamp})=>!Number.isNaN(Date.parse(timestamp))));
+});
+
+test("returns sanitized durable mining history and block outlook", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-history-"));
+  const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor() });
+  const started = Date.now()-60_000;
+  const first = {networkHashrate:1e12,networkBlockCount:100,workers:[{instance:"5555",worker:"RIG01",wallet:"private",hashrate:10}],blocks:[]};
+  const second = {networkHashrate:1e12,networkBlockCount:101,workers:[{instance:"5555",worker:"RIG01",wallet:"private",hashrate:10}],blocks:[{instance:"5555",worker:"RIG01",wallet:"private",hash:"block-a",timestamp:String((started+60_000)/1000)}]};
+  await manager.history.record(first,started);
+  await manager.history.record(second,started+60_000);
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+  const response=await fetch(`http://127.0.0.1:${port}/api/manager/history`);
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.blocksFound,1);
+  assert.equal(body.workers[0].worker,"RIG01");
+  assert.equal(body.workers[0].blocksFound,1);
+  assert.ok(body.expectedBlocksNextWindow>0);
+  assert.doesNotMatch(JSON.stringify(body),/wallet|private|block-a/);
 });
 
 test("reads only the sanitized settings model", async (t) => {
