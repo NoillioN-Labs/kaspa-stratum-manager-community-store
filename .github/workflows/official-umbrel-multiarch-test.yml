@@ -1,0 +1,64 @@
+name: Official Umbrel Multi-Arch Validation
+
+on:
+  push:
+    branches:
+      - official-umbrel-submission
+    paths:
+      - .github/workflows/official-umbrel-multiarch-test.yml
+      - .github/workflows/slow-push.yml
+      - kaspa-stratum-manager/Dockerfile
+      - kaspa-stratum-manager/package.json
+      - kaspa-stratum-manager/package-lock.json
+      - kaspa-stratum-manager/app/**
+      - kaspa-stratum-manager/server/**
+      - kaspa-stratum-manager/scripts/**
+      - kaspa-stratum-manager/config/**
+      - kaspa-stratum-manager/docker/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: official-umbrel-multiarch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-multiarch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out sanitized public source
+        uses: actions/checkout@v6
+
+      - name: Block sensitive public content
+        working-directory: kaspa-stratum-manager
+        run: node scripts/check-public-safety.mjs
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build complete image for amd64 and arm64 without publishing
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: ./kaspa-stratum-manager
+          file: ./kaspa-stratum-manager/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          build-args: |
+            APP_VERSION=official-umbrel-validation
+          cache-from: type=gha,scope=official-umbrel-multiarch
+          cache-to: type=gha,mode=max,scope=official-umbrel-multiarch
+          provenance: false
+          sbom: false
+
+      - name: Record validation result
+        run: |
+          echo "Kaspa Stratum Manager full image built successfully for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- linux/amd64" >> "$GITHUB_STEP_SUMMARY"
+          echo "- linux/arm64" >> "$GITHUB_STEP_SUMMARY"
