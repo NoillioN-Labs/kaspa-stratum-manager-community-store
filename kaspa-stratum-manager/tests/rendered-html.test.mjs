@@ -58,6 +58,11 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /running\?"Restart":"Start"/);
   assert.match(source, /Automatic is recommended for most miners/);
   assert.match(source, /Save and restart bridge/);
+  assert.match(source, /Reset miner statistics/);
+  assert.match(source, /api\/manager\/statistics\/reset/);
+  assert.match(source, /role="alertdialog"/);
+  assert.match(source, /Delete all data/);
+  assert.match(source, /cannot be undone/i);
   assert.match(source, /Saving briefly interrupts miners/);
   assert.match(source, /previous working settings are restored automatically/);
   assert.match(source, /Umbrel node connection is protected/);
@@ -118,6 +123,8 @@ test("dashboard styles provide a readable iPhone layout", async () => {
   assert.match(styles, /\.history-points i:nth-last-child\(-n\+60\)/);
   assert.match(styles, /\.chart-range button/);
   assert.match(styles, /\.performance-window-grid/);
+  assert.match(styles, /\.share-activity span,\.outlook-inputs span\{display:flex;align-items:baseline;justify-content:flex-start/);
+  assert.match(styles, /\.confirm-backdrop/);
   assert.match(styles, /\.recent-blocks table,\.recent-blocks tbody/);
   assert.match(styles, /\.miners table,\.miners tbody,\.miners tr,\.miners td\{display:block/);
   assert.match(styles, /\.system-health \.health strong\{font-size:13px/);

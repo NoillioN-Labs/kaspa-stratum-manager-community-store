@@ -108,3 +108,21 @@ test("calculates solo-mining performance windows, share freshness, quality, luck
   const persisted = await readFile(historyPath,"utf8");
   assert.doesNotMatch(persisted,/address|secret|private/i);
 });
+
+test("atomically resets persisted mining history", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-history-reset-"));
+  const historyPath = path.join(directory, "mining-history.json");
+  let now = Date.parse("2026-08-30T00:00:00Z");
+  const store = new MiningHistoryStore({ path:historyPath, now:()=>now, flushIntervalMs:SEVEN_DAYS_MS });
+  await store.record({ networkHashrate:1e12, networkBlockCount:10, workers:[{ worker:"RIG01", hashrateGhs:1000 }] });
+  now += 60_000;
+  await store.record({ networkHashrate:1e12, networkBlockCount:11, workers:[{ worker:"RIG01", hashrateGhs:1000 }], blocks:[{ worker:"RIG01", hash:"block-reset-test" }] });
+  await store.reset();
+
+  const summary = await store.summary();
+  assert.equal(summary.sampleCount,0);
+  assert.equal(summary.blocksFound,0);
+  assert.deepEqual(summary.workers,[]);
+  assert.deepEqual(summary.recentBlocks,[]);
+  assert.deepEqual(JSON.parse(await readFile(historyPath,"utf8")),{version:2,samples:[],blocks:[]});
+});

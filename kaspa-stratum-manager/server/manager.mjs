@@ -212,6 +212,7 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
   let metricsTimer = null;
   let metricsSample = null;
   const serializeSettingsWrite = serialQueue();
+  const serializeStatisticsReset = serialQueue();
   const waitForBridgeHealthy = dependencies.waitForBridgeHealthy || (async () => {
     const deadline = Date.now() + config.settingsHealthTimeoutMs;
     let lastError = "Bridge did not become healthy";
@@ -255,6 +256,15 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     // Re-read through the same parser used by GET without exposing raw YAML.
     parseBridgeSettings(source),
   ).settings;
+
+  const resetMinerStatistics = (input) => serializeStatisticsReset(async () => {
+    if (input?.confirmation !== "DELETE MINER STATISTICS") {
+      throw Object.assign(new Error("Confirm deletion before resetting miner statistics"), { statusCode: 400 });
+    }
+    await Promise.all([history.reset(), metrics.reset()]);
+    logs.add("manager", "Historical miner statistics were reset by the user");
+    return { result: "reset", resetAt: new Date().toISOString() };
+  });
 
   const sampleHistory = async () => {
     try { await history.record(await fetchBridgeStats()); }
@@ -332,6 +342,9 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
       }
       if (req.method === "GET" && url.pathname === "/api/manager/metrics") {
         return json(res, 200, await metrics.summary(), origin);
+      }
+      if (req.method === "POST" && url.pathname === "/api/manager/statistics/reset") {
+        return json(res, 200, await resetMinerStatistics(await readJsonBody(req)), origin);
       }
       if (req.method === "GET" && url.pathname === "/api/manager/support") {
         return json(res, 200, donationSupportModel(config), origin);

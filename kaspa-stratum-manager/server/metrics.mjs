@@ -120,6 +120,16 @@ export class DashboardMetricsStore {
     });
   }
 
+  reset() {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      const lastBridgeShares = this.data.lastBridgeShares;
+      this.data = { ...emptyData(), lastBridgeShares };
+      this.dirty = true;
+      await this.flushUnlocked(true);
+    });
+  }
+
   close() {
     return this.queue(async () => { await this.loadUnlocked(); await this.flushUnlocked(true); });
   }
