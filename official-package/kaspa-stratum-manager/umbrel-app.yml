@@ -1,0 +1,29 @@
+manifestVersion: 1
+id: kaspa-stratum-manager
+category: crypto
+name: Kaspa Stratum Manager
+version: "1.0.4"
+tagline: Manage Kaspa solo mining locally
+description: >-
+  A local-first Umbrel interface for the official Rusty Kaspa Stratum Bridge.
+  Monitor miners, hashrate, shares and confirmed blocks; review seven-day
+  performance estimates; run diagnostics; and apply safe bridge settings with
+  automatic rollback. Requires the Rusty Kaspad Umbrel app.
+releaseNotes: ""
+
+developer: NoillioN Labs
+website: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+dependencies:
+  - rusty-kaspad
+repo: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+support: https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/issues
+
+port: 5556
+gallery: []
+path: ""
+
+defaultUsername: ""
+defaultPassword: ""
+
+submitter: Nathan Oldaker
+submission: ""
