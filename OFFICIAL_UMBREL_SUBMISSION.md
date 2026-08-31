@@ -23,24 +23,29 @@ Prepare Kaspa Stratum Manager for submission to the Official Umbrel App Store wh
 - No host networking.
 - Stratum miner port is explicitly published as TCP 5555.
 - Current package has health checks for both web and manager services.
+- Full Docker image, including the bundled Rusty Kaspa Stratum Bridge, successfully validates for both `linux/amd64` and `linux/arm64`.
 
 ## Official Umbrel App Store requirements to resolve
 
-### 1. Multi-architecture images — BLOCKER
+### 1. Multi-architecture images — VALIDATED
 
-Umbrel's current packaging rules require maintained images for both:
+The full Docker build and bundled Rusty Kaspa Stratum Bridge have now successfully built for:
 
 - `linux/amd64`
 - `linux/arm64`
 
-Current `fast-push.yml` and `slow-push.yml` publish only `linux/amd64`.
+Completed:
+- Added QEMU setup to the release workflow.
+- Updated the full release workflow to target `linux/amd64,linux/arm64`.
+- Added a non-publishing multi-architecture validation workflow.
+- Validation workflow completed successfully for both architectures.
 
-Action:
-- Validate the full Docker build and bundled Rusty Kaspa Stratum Bridge on `linux/arm64`.
-- Update release workflow to publish a multi-platform manifest for `linux/amd64,linux/arm64`.
-- Confirm the resulting GHCR image is publicly pullable on both architectures.
+Remaining release action:
+- Publish the next immutable GHCR release as a dual-architecture manifest.
+- Confirm the published digest is publicly pullable on both architectures.
+- Repoint the fast-build base image to that dual-architecture immutable release before making the fast path multi-architecture.
 
-### 2. Official-store manifest cleanup — REQUIRED
+### 2. Official-store manifest cleanup — IN PROGRESS
 
 Community manifest currently uses:
 
@@ -52,12 +57,14 @@ Community manifest currently uses:
 
 Official package should use current Umbrel conventions:
 
-- change category to an official taxonomy value; `crypto` matches the official `rusty-kaspad` package.
+- change category to `crypto`, matching the official `rusty-kaspad` package.
 - omit `icon:` from the official package.
 - use `gallery: []` for the initial official submission; provide screenshots and logo in the PR body.
 - add an accurate `website:` value.
 - set `submission:` to the final upstream Umbrel pull-request URL once created.
-- review `manifestVersion`; default to `1` unless a newer framework feature is actually required.
+- use `manifestVersion: 1` unless a newer framework feature is required.
+
+A separate official-package draft is being maintained on this branch so the live Community App Store package is not disturbed.
 
 ### 3. Canonical repository / source visibility — REVIEW REQUIRED
 
@@ -69,7 +76,7 @@ Decision required before final PR:
 A. Make `NoillioN-Labs/kaspa-stratum-manager` public and use it as the canonical `repo:` / `website:` source; or
 B. Continue treating `kaspa-stratum-manager-community-store` as the publicly reviewable upstream source for the official package.
 
-Preferred long-term architecture is A if all source can safely be made public.
+Until this is decided, the official-package draft uses the public Community App Store repository as its reviewable source.
 
 ### 4. Licensing — BLOCKER / POLICY REVIEW
 
@@ -176,9 +183,10 @@ The final PR body should include:
 | No privileged mode | PASS |
 | No host networking | PASS |
 | Official Rusty Kaspad dependency | PASS / integration method to verify |
-| Official manifest taxonomy/metadata | NEEDS WORK |
-| `linux/amd64` image | PASS |
-| `linux/arm64` image | BLOCKER |
+| Official manifest taxonomy/metadata | IN PROGRESS |
+| `linux/amd64` build | PASS |
+| `linux/arm64` build | PASS |
+| Published dual-architecture immutable release | REQUIRED |
 | Explicit project license | BLOCKER / REVIEW |
 | Canonical public upstream | REVIEW |
 | Official Umbrel lint | NOT RUN YET |
@@ -187,9 +195,11 @@ The final PR body should include:
 
 ## Next actions
 
-1. Make the release image multi-architecture and validate ARM64.
+1. Prepare the clean official-store manifest and compose draft.
 2. Resolve project licensing.
 3. Decide canonical public source repository strategy.
-4. Build official-store manifest and compose files on this branch.
-5. Run official Umbrel lint/test cycle.
-6. Fork `getumbrel/umbrel-apps`, create submission branch, add package, and open PR.
+4. Publish the next immutable dual-architecture GHCR release and capture its digest.
+5. Update the official package draft to the immutable dual-architecture digest.
+6. Run official Umbrel lint/test cycle.
+7. Perform install/restart/reboot acceptance testing on Umbrel.
+8. Fork `getumbrel/umbrel-apps`, create submission branch, add package, and open PR.
