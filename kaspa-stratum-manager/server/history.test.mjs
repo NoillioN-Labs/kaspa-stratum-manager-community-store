@@ -55,6 +55,56 @@ test("prunes samples and block events outside the seven-day window", async () =>
   const summary = await store.summary();
   assert.equal(summary.sampleCount,1);
   assert.equal(summary.blocksFound,0);
+  assert.equal(summary.recentBlocks.length,1);
+  assert.equal(summary.blockHistoryDays,90);
   assert.deepEqual(summary.workers.map(({worker})=>worker),["current"]);
 });
 
+test("calculates solo-mining performance windows, share freshness, quality, luck, effort, and charts", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-history-performance-"));
+  const historyPath = path.join(directory,"mining-history.json");
+  const hour = 60 * 60 * 1000;
+  let now = Date.parse("2026-08-30T00:00:00Z");
+  const store = new MiningHistoryStore({ path:historyPath, now:()=>now, sampleIntervalMs:hour, flushIntervalMs:SEVEN_DAYS_MS });
+  for (let index = 0; index <= 25; index += 1) {
+    const blocks = index === 12 || index === 24 ? [{ worker:"RIG01", hash:`block-${index}`, timestamp:String(now/1000) }] : [];
+    await store.record({
+      networkHashrate:100e9,
+      networkDifficulty:500 + index,
+      networkBlockCount:1_000 + index,
+      workers:[{
+        instance:"5555",
+        worker:"RIG01",
+        hashrate:index < 12 ? 2 : 4,
+        shares:index * 30,
+        staleShares:index >= 18 ? 1 : 0,
+        invalidShares:index >= 22 ? 1 : 0,
+      }],
+      blocks,
+    });
+    if (index < 25) now += hour;
+  }
+  await store.close();
+
+  const summary = await store.summary();
+  assert.equal(summary.periods.oneHour.averageHashrateHs,4e9);
+  assert.equal(summary.periods.sixHours.averageHashrateHs,4e9);
+  assert.ok(summary.periods.twentyFourHours.averageHashrateHs > 3e9);
+  assert.equal(summary.periods.oneHour.acceptedShares,30);
+  assert.equal(summary.periods.oneHour.sharesPerMinute,0.5);
+  assert.equal(summary.periods.twentyFourHours.staleShares,1);
+  assert.equal(summary.periods.twentyFourHours.invalidShares,1);
+  assert.ok(summary.periods.twentyFourHours.rejectionRate > 0);
+  assert.equal(summary.workers[0].periods.oneHour.lastAcceptedShareAt,new Date(now).toISOString());
+  assert.ok(summary.expectedBlocksObserved > 0);
+  assert.equal(summary.blocksFound,2);
+  assert.ok(summary.luckRatio > 0);
+  assert.ok(summary.currentRoundEffortPercent > 0);
+  assert.equal(summary.recentBlocks.length,2);
+  assert.ok(summary.recentBlocks[0].effortPercent > 0);
+  assert.ok(summary.charts.oneHour.length >= 2);
+  assert.ok(summary.charts.sevenDays.length >= 2);
+
+  const persisted = await readFile(historyPath,"utf8");
+  assert.doesNotMatch(persisted,/address|secret|private/i);
+});

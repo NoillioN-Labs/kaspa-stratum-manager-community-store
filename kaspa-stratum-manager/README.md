@@ -4,14 +4,16 @@ Kaspa Stratum Manager is a local-first Umbrel interface for solo mining through
 the official Rusty Kaspa Stratum Bridge and the Rusty Kaspad node already
 running on your Umbrel.
 
-## What version 1.0 includes
+## What the application includes
 
 The application is organized into five clear screens:
 
 - **Overview** shows bridge status, combined hashrate, accepted shares, system
-  health, active miners and recent performance.
-- **Miners** shows each connected worker, average hashrate, confirmed blocks,
-  expected blocks, seven-day probability and estimated average time to a block.
+  health, active miners and selectable performance charts from ten minutes to
+  seven days.
+- **Miners** shows each connected worker, one-hour, six-hour, 24-hour and
+  seven-day performance, share activity, confirmed blocks, expected blocks,
+  observed luck, round effort and estimated average time to a block.
 - **Logs** provides bounded, readable manager and bridge logs without requiring
   command-line access.
 - **Diagnostics** checks the node, bridge API, supervisor and runtime profile
@@ -20,10 +22,16 @@ The application is organized into five clear screens:
   a clear restart warning and automatic last-known-good rollback.
 
 The manager samples mining performance once per minute and keeps a rolling
-seven-day history in the Umbrel app data directory. Block attribution uses the
-worker information reported by the official bridge. Forecasts are estimates
-derived from locally observed miner and network performance, not promises of a
-block.
+seven-day performance history plus a compact 90-day confirmed-block record in
+the Umbrel app data directory. Block attribution uses the worker information
+reported by the official bridge. Forecasts are estimates derived from locally
+observed miner and network performance, not promises of a block. Round effort
+may exceed 100% and is not a progress indicator.
+
+The application is intentionally focused on solo mining. It does not collect
+pool balances, payouts, fiat conversions, payment history or wallet
+information. If the bridge does not provide a stale or invalid share counter,
+the interface reports that the value is unavailable instead of estimating it.
 
 ## Before installing
 
@@ -50,7 +58,9 @@ Mutable state is stored under the Umbrel application data directory:
 
 - the active bridge configuration;
 - a last-known-good configuration backup;
-- a rolling seven-day mining history.
+- a rolling seven-day performance history;
+- a compact 90-day confirmed-block record; and
+- a rolling ten-minute dashboard series.
 
 The history contains only the worker/instance performance, network
 observations and block event identifiers required for calculations and
@@ -65,12 +75,13 @@ controls, complete app restart, prebuilt updates and LAN Stratum TCP 5555.
 An IceRiver KS7 Lite has connected, reported live hashrate and submitted
 accepted shares.
 
-Automated settings persistence, rollback and seven-day history tests pass.
+Automated settings persistence, rollback, analytics and history tests pass.
 Physical version 1.0.0 also retains accurate seven-day history through a
-complete app restart, and all five pages work correctly. The KS7 Lite reconnected automatically, and saved Settings—including a
-deliberately changed setting—persisted across restart. Extended ASIC
-stability/rejection-rate monitoring and linux/arm64 publication are not yet
-claimed.
+complete app restart, and all five pages work correctly. The KS7 Lite
+reconnected automatically, and saved Settings—including a deliberately changed
+setting—persisted across restart. The new extended analytics and 90-day block
+record require physical validation after installation; that validation is not
+inferred from automated tests.
 
 ## Support and responsible diagnostics
 

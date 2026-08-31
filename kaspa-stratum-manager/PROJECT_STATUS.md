@@ -209,6 +209,25 @@ keys, GitHub credentials or other secrets.
 - Added history calculation, persistence, sanitization, API, rendered-interface
   and packaging tests.
 
+### Session 7 — Persistent live dashboard metrics
+
+- Moved the ten-minute Overview hashrate series into the always-running manager
+  service so browser refreshes and restarts do not reset the chart.
+- Added bounded atomic storage and a cumulative accepted-share total without
+  changing truthful current-session bridge uptime.
+
+### Session 8 — Solo-mining performance analytics
+
+- Added one-hour, six-hour, 24-hour and seven-day performance windows with
+  responsive downsampled charts.
+- Added accepted-share freshness/rate, availability, optional share-quality
+  reporting, actual-versus-expected blocks, observed luck and round effort.
+- Retained compact confirmed-block events for 90 days without exposing hashes,
+  wallet information, miner addresses or raw diagnostics.
+- Optimized Overview and Miners layouts for narrow mobile screens.
+- Kept the feature strictly focused on solo mining; pool balances, payouts,
+  payment records and fiat conversions are not collected.
+
 ## Validation status
 
 The production dashboard build, ESLint, manager tests, settings persistence and
