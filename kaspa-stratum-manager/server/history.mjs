@@ -380,5 +380,14 @@ export class MiningHistoryStore {
     });
   }
 
+  reset() {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      this.data = emptyData();
+      this.dirty = true;
+      await this.flushUnlocked(true);
+    });
+  }
+
   close() { return this.queue(async () => { await this.loadUnlocked(); await this.flushUnlocked(true); }); }
 }

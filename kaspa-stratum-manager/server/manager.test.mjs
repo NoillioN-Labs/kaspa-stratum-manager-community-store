@@ -166,6 +166,30 @@ test("returns sanitized durable mining history and block outlook", async (t) => 
   assert.doesNotMatch(JSON.stringify(body),/wallet|private|block-a/);
 });
 
+test("requires confirmation and resets all retained miner statistics", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-reset-"));
+  const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor() });
+  const started = Date.now()-60_000;
+  await manager.history.record({networkHashrate:1e12,networkBlockCount:100,workers:[{worker:"RIG01",hashrateGhs:1000}]},started);
+  await manager.history.record({networkHashrate:1e12,networkBlockCount:101,workers:[{worker:"RIG01",hashrateGhs:1000}],blocks:[{worker:"RIG01",hash:"block-reset"}]},started+60_000);
+  await manager.metrics.record({activeWorkers:1,totalShares:42,workers:[{hashrateGhs:1000}]},started+60_000);
+  const port=await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);});
+
+  const rejected=await fetch(`http://127.0.0.1:${port}/api/manager/statistics/reset`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({})});
+  assert.equal(rejected.status,400);
+  const response=await fetch(`http://127.0.0.1:${port}/api/manager/statistics/reset`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({confirmation:"DELETE MINER STATISTICS"})});
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).result,"reset");
+  const history=await manager.history.summary();
+  const metrics=await manager.metrics.summary();
+  assert.equal(history.sampleCount,0);
+  assert.equal(history.blocksFound,0);
+  assert.deepEqual(history.workers,[]);
+  assert.equal(metrics.acceptedSharesTotal,0);
+  assert.deepEqual(metrics.samples,[]);
+});
+
 test("returns persistent rolling dashboard metrics without private worker data", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-metrics-"));
   const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor() });

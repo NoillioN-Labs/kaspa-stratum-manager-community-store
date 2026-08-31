@@ -48,3 +48,25 @@ test("keeps only the rolling ten-minute dashboard window", async () => {
   assert.equal(summary.samples[0].connectedMiners, 2);
   assert.equal(summary.acceptedSharesTotal, 2);
 });
+
+test("resets displayed dashboard history while retaining the bridge counter baseline", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-metrics-reset-"));
+  const metricsPath = path.join(directory, "dashboard-metrics.json");
+  let now = Date.parse("2026-08-30T00:00:00Z");
+  const store = new DashboardMetricsStore({ path:metricsPath, now:()=>now, flushIntervalMs:TEN_MINUTES_MS });
+  await store.record({ activeWorkers:1, totalShares:100, workers:[{ hashrateGhs:10 }] });
+  await store.reset();
+  let summary = await store.summary();
+  assert.equal(summary.acceptedSharesTotal,0);
+  assert.deepEqual(summary.samples,[]);
+
+  now += 5_000;
+  await store.record({ activeWorkers:1, totalShares:103, workers:[{ hashrateGhs:11 }] });
+  summary = await store.summary();
+  assert.equal(summary.acceptedSharesTotal,3);
+  assert.equal(summary.samples.length,1);
+  await store.close();
+  const persisted = JSON.parse(await readFile(metricsPath,"utf8"));
+  assert.equal(persisted.acceptedSharesTotal,3);
+  assert.equal(persisted.samples.length,1);
+});
