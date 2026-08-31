@@ -25,14 +25,15 @@ connected-miner count and share totals are stored; wallet and worker identity
 are excluded from this short-term file.
 
 The manager independently samples bridge statistics once per minute, even when
-the GUI is closed. It retains seven days of per-worker hashrate, network
-hashrate, network difficulty and network block-count observations in
+the GUI is closed. It retains seven days of per-worker hashrate, optional share
+counters, network hashrate, network difficulty and network block-count
+observations in
 `/data/mining-history.json`. The file is atomically replaced at bounded
 intervals and immediately after a new confirmed block is observed. Retention is
-pruned on read and write. Stored history contains worker/instance labels and
-block hashes for event deduplication, but never wallet addresses, miner IPs,
-credentials or raw diagnostics. The sanitized history API does not return block
-hashes.
+pruned on read and write, while compact confirmed-block events are retained for
+90 days. Stored history contains worker/instance labels and block hashes for
+event deduplication, but never wallet addresses, miner IPs, credentials or raw
+diagnostics. The sanitized history API does not return block hashes.
 
 Expected blocks are estimated for each observed interval from the miner's share
 of network hashrate multiplied by the network block-count change. The seven-day
@@ -40,6 +41,15 @@ forecast extrapolates the measured expected-block rate; the chance of at least
 one block uses the Poisson model `1 - exp(-expectedBlocks)`. Long sampling gaps
 are excluded instead of assuming the miner remained online. These figures are
 statistical estimates, not payout or block guarantees.
+
+The sanitized history model provides one-hour, six-hour, 24-hour and seven-day
+performance windows and downsampled chart series. It derives accepted-share
+freshness and rate from counter changes and reports stale/invalid quality only
+when the bridge supplies those counters. Luck compares confirmed blocks with
+expected blocks over the observed period. Round effort is the statistically
+expected work accumulated since the previous observed block; it may exceed
+100% and is not a completion percentage. Pool balances, payments, fiat values
+and wallet data are outside the manager's schema.
 
 ## Pinned bridge supply chain
 

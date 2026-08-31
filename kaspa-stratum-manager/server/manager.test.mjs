@@ -154,6 +154,15 @@ test("returns sanitized durable mining history and block outlook", async (t) => 
   assert.equal(body.workers[0].worker,"RIG01");
   assert.equal(body.workers[0].blocksFound,1);
   assert.ok(body.expectedBlocksNextWindow>0);
+  assert.ok(body.periods.oneHour);
+  assert.ok(body.periods.sixHours);
+  assert.ok(body.periods.twentyFourHours);
+  assert.ok(body.periods.sevenDays);
+  assert.ok(Array.isArray(body.charts.oneHour));
+  assert.equal(body.recentBlocks.length,1);
+  assert.equal(body.recentBlocks[0].worker,"RIG01");
+  assert.equal(body.recentBlocks[0].networkBlockCount,101);
+  assert.equal(Object.hasOwn(body.recentBlocks[0],"hash"),false);
   assert.doesNotMatch(JSON.stringify(body),/wallet|private|block-a/);
 });
 
