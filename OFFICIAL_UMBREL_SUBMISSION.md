@@ -24,6 +24,8 @@ Prepare Kaspa Stratum Manager for submission to the Official Umbrel App Store wh
 - Stratum miner port is explicitly published as TCP 5555.
 - Current package has health checks for both web and manager services.
 - Full Docker image, including the bundled Rusty Kaspa Stratum Bridge, successfully validates for both `linux/amd64` and `linux/arm64`.
+- Project license is now explicitly MIT.
+- Rusty Kaspa ISC licensing is preserved in `THIRD_PARTY_NOTICES.md`.
 
 ## Official Umbrel App Store requirements to resolve
 
@@ -78,14 +80,16 @@ B. Continue treating `kaspa-stratum-manager-community-store` as the publicly rev
 
 Until this is decided, the official-package draft uses the public Community App Store repository as its reviewable source.
 
-### 4. Licensing — BLOCKER / POLICY REVIEW
+### 4. Licensing — PASS
 
-No top-level `LICENSE` file is currently present in either the private development repository or the public Community App Store repository.
+Kaspa Stratum Manager is licensed under the MIT License.
 
-Action:
-- Determine the intended license for Kaspa Stratum Manager.
-- Add an explicit license before official submission if the software is intended to be open source/publicly reviewable.
-- Confirm bundled/upstream Rusty Kaspa Stratum Bridge licensing and preserve required notices.
+Completed:
+- Added top-level `LICENSE` with copyright held by NoillioN Labs.
+- Confirmed upstream Rusty Kaspa uses the ISC License.
+- Added `THIRD_PARTY_NOTICES.md` preserving the Rusty Kaspa copyright and ISC permission/disclaimer text.
+
+No licensing blocker remains for the official Umbrel submission based on the currently bundled Rusty Kaspa component.
 
 ### 5. Rusty Kaspad dependency integration — VERIFY
 
@@ -187,7 +191,8 @@ The final PR body should include:
 | `linux/amd64` build | PASS |
 | `linux/arm64` build | PASS |
 | Published dual-architecture immutable release | REQUIRED |
-| Explicit project license | BLOCKER / REVIEW |
+| Explicit project license | PASS — MIT |
+| Rusty Kaspa third-party notice | PASS — ISC notice retained |
 | Canonical public upstream | REVIEW |
 | Official Umbrel lint | NOT RUN YET |
 | Full install/restart/reboot acceptance test | NOT RUN YET |
@@ -195,11 +200,10 @@ The final PR body should include:
 
 ## Next actions
 
-1. Prepare the clean official-store manifest and compose draft.
-2. Resolve project licensing.
-3. Decide canonical public source repository strategy.
-4. Publish the next immutable dual-architecture GHCR release and capture its digest.
-5. Update the official package draft to the immutable dual-architecture digest.
-6. Run official Umbrel lint/test cycle.
-7. Perform install/restart/reboot acceptance testing on Umbrel.
-8. Fork `getumbrel/umbrel-apps`, create submission branch, add package, and open PR.
+1. Decide canonical public source repository strategy.
+2. Publish the next immutable dual-architecture GHCR release and capture its digest.
+3. Update the official package draft to the immutable dual-architecture digest.
+4. Complete official manifest metadata.
+5. Run official Umbrel lint/test cycle.
+6. Perform install/restart/reboot acceptance testing on Umbrel.
+7. Fork `getumbrel/umbrel-apps`, create submission branch, add package, and open PR.
