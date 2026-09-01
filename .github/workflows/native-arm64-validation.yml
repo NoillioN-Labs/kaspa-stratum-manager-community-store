@@ -1,0 +1,127 @@
+name: Native ARM64 Validation
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: native-arm64-validation
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TEST_IMAGE: kaspa-stratum-manager:native-arm64-validation
+
+jobs:
+  build-and-smoke-test:
+    name: Build and test on native ARM64
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - name: Check out sanitized public source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: kaspa-stratum-manager/package-lock.json
+
+      - name: Install dependencies
+        working-directory: kaspa-stratum-manager
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate public application source
+        working-directory: kaspa-stratum-manager
+        env:
+          KSM_PACKAGE_CHANNEL: fast
+        run: |
+          npm test
+          npm run lint
+          node scripts/check-public-safety.mjs
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the complete image natively
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: ./kaspa-stratum-manager
+          file: ./kaspa-stratum-manager/Dockerfile
+          platforms: linux/arm64
+          load: true
+          tags: ${{ env.TEST_IMAGE }}
+          build-args: |
+            APP_VERSION=arm64-validation
+            KSM_DONATION_KASPA_ADDRESS=${{ secrets.KSM_DONATION_KASPA_ADDRESS }}
+            KSM_DONATION_BITCOIN_ADDRESS=${{ secrets.KSM_DONATION_BITCOIN_ADDRESS }}
+          cache-from: type=gha,scope=native-arm64-validation
+          cache-to: type=gha,mode=max,scope=native-arm64-validation
+          provenance: false
+          sbom: false
+
+      - name: Verify ARM64 image and bridge executable
+        run: |
+          test "$(docker image inspect --format '{{.Architecture}}' "$TEST_IMAGE")" = "arm64"
+          test "$(docker run --rm --entrypoint uname "$TEST_IMAGE" -m)" = "aarch64"
+          docker run --rm --entrypoint /usr/local/bin/stratum-bridge "$TEST_IMAGE" --help >/dev/null
+
+      - name: Smoke-test manager, web UI and persistence
+        run: |
+          set -eu
+          cleanup() {
+            docker logs ksm-arm64-manager 2>/dev/null || true
+            docker logs ksm-arm64-manager-2 2>/dev/null || true
+            docker logs ksm-arm64-web 2>/dev/null || true
+            docker rm -f ksm-arm64-manager ksm-arm64-manager-2 ksm-arm64-web 2>/dev/null || true
+            docker volume rm ksm-arm64-data 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          docker volume create ksm-arm64-data >/dev/null
+          docker run -d --name ksm-arm64-manager \
+            -p 127.0.0.1:18081:8081 \
+            -v ksm-arm64-data:/data \
+            -e MANAGER_HOST=0.0.0.0 \
+            -e MANAGER_PORT=8081 \
+            -e APP_PROFILE=arm64-validation \
+            "$TEST_IMAGE" node server/manager.mjs
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/api/manager/status >/dev/null; then break; fi
+            if [ "$attempt" = 30 ]; then docker logs ksm-arm64-manager; exit 1; fi
+            sleep 2
+          done
+          docker exec ksm-arm64-manager test -s /data/config.yaml
+          docker rm -f ksm-arm64-manager >/dev/null
+
+          docker run -d --name ksm-arm64-manager-2 \
+            -p 127.0.0.1:18081:8081 \
+            -v ksm-arm64-data:/data \
+            -e MANAGER_HOST=0.0.0.0 \
+            -e MANAGER_PORT=8081 \
+            -e APP_PROFILE=arm64-validation \
+            "$TEST_IMAGE" node server/manager.mjs
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18081/api/manager/status >/dev/null; then break; fi
+            if [ "$attempt" = 30 ]; then exit 1; fi
+            sleep 2
+          done
+          docker exec ksm-arm64-manager-2 test -s /data/config.yaml
+
+          docker run -d --name ksm-arm64-web \
+            -p 127.0.0.1:18080:8080 \
+            "$TEST_IMAGE"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/ >/dev/null; then break; fi
+            if [ "$attempt" = 30 ]; then exit 1; fi
+            sleep 2
+          done
+
+      - name: Record validation scope
+        run: |
+          echo "Native ARM64 build and container smoke tests passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "This validates ARM64 execution in CI; it is not physical umbrelOS validation." >> "$GITHUB_STEP_SUMMARY"
