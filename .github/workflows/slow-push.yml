@@ -100,6 +100,7 @@ jobs:
           RELEASE_DIGEST: ${{ steps.build.outputs.digest }}
           RELEASE_VERSION: ${{ inputs.version }}
           SOURCE_SHA: ${{ github.sha }}
+          KSM_PACKAGE_CHANNEL: slow
         run: |
           node scripts/pin-package.mjs slow "$RELEASE_DIGEST" "$RELEASE_VERSION" "$SOURCE_SHA"
           npm run test:packaging
