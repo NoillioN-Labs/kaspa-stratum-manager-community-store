@@ -21,6 +21,12 @@ type DashboardMetricSample={timestamp:number;hashrateHs:number;connectedMiners:n
 type DashboardMetrics={retentionMinutes:number;sampleIntervalSeconds:number;acceptedSharesTotal:number;startedAt:string|null;lastSampleAt:string|null;samples:DashboardMetricSample[]};
 type DonationCurrency={id:"kaspa"|"bitcoin";label:string;address:string};
 type DonationSupport={enabled:boolean;currencies:DonationCurrency[]};
+type ThemeMode="light"|"dark";
+const themeStorageKey="kaspa-stratum-manager-theme";
+const themeChangeEvent="kaspa-stratum-manager-theme-change";
+const subscribeTheme=(onChange:()=>void)=>{const notify=()=>onChange();window.addEventListener(themeChangeEvent,notify);window.addEventListener("storage",notify);return()=>{window.removeEventListener(themeChangeEvent,notify);window.removeEventListener("storage",notify)}};
+const readTheme=():ThemeMode=>document.documentElement.dataset.theme==="dark"?"dark":"light";
+const readServerTheme=():ThemeMode=>"light";
 const formatHashrate=(value?:number)=>value?value>=1e18?`${(value/1e18).toFixed(2)} EH/s`:value>=1e12?`${(value/1e12).toFixed(2)} TH/s`:`${(value/1e9).toFixed(2)} GH/s`:"—";
 const workerHashrateGhs=(worker:BridgeWorker)=>worker.hashrateGhs??worker.hashrate??0;
 const formatWorkerHashrate=(worker:BridgeWorker)=>formatHashrate(workerHashrateGhs(worker)*1e9);
@@ -45,6 +51,8 @@ export default function Home(){
  const [donationSupport,setDonationSupport]=useState<DonationSupport|null>(null); const [donationsOpen,setDonationsOpen]=useState(false); const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
  const [diagnosticsRunning,setDiagnosticsRunning]=useState(false);
  const managerBase=process.env.NEXT_PUBLIC_MANAGER_URL??"";
+ const theme=useSyncExternalStore(subscribeTheme,readTheme,readServerTheme);
+ const selectTheme=(nextTheme:ThemeMode)=>{document.documentElement.dataset.theme=nextTheme;try{window.localStorage.setItem(themeStorageKey,nextTheme)}catch{}window.dispatchEvent(new Event(themeChangeEvent))};
  const refresh=useCallback(async()=>{try{const statusResponse=await fetch(`${managerBase}/api/manager/status`,{cache:"no-store"});if(!statusResponse.ok)throw new Error(`Manager returned ${statusResponse.status}`);const status=await statusResponse.json();setManager(status);setError("");if(status.bridge.api.reachable){const statsResponse=await fetch(`${managerBase}/api/manager/stats`,{cache:"no-store"});if(statsResponse.ok)setStats(await statsResponse.json());else setStats(null)}else setStats(null)}catch(reason){setStats(null);setError(reason instanceof Error?reason.message:"Manager unavailable")}},[managerBase]);
  useEffect(()=>{const initial=window.setTimeout(refresh,0);const timer=window.setInterval(refresh,5000);return()=>{window.clearTimeout(initial);window.clearInterval(timer)}},[refresh]);
  const loadSettings=useCallback(async()=>{setSettingsLoading(true);try{const response=await fetch(`${managerBase}/api/manager/settings`,{cache:"no-store"});const body=await response.json();if(!response.ok)throw new Error(body.error||"Settings are unavailable");setSettingsModel(body);setSettings(body.settings);setSettingsIssues([]);setSettingsNotice(null)}catch(reason){setSettingsNotice({kind:"error",text:reason instanceof Error?reason.message:"Settings are unavailable"})}finally{setSettingsLoading(false)}},[managerBase]);
@@ -131,7 +139,8 @@ export default function Home(){
    <section className="panel diagnostics-help"><div className="panel-head"><div><h3>If something is not working</h3><p>Start with the check that shows “Needs attention”</p></div></div><div className="diagnostics-help-grid"><article><b>1</b><span><strong>Node unavailable</strong><small>Confirm the Rusty Kaspad app is installed, running, and fully started.</small></span></article><article><b>2</b><span><strong>Bridge stopped</strong><small>Return to Overview and select Start or Restart.</small></span></article><article><b>3</b><span><strong>Miner not connecting</strong><small>Check the miner’s pool address, local network, and TCP port 5555.</small></span></article></div></section>
   </section>:section==="Settings"?<section className="settings-page">
    <div className="settings-intro"><div><h2>Bridge settings</h2><p>Automatic is recommended for most miners. Wallets, passwords, and the Umbrel node connection are never stored here.</p></div><span>Protected local configuration</span></div>
-   {settingsNotice&&<div className={`settings-notice ${settingsNotice.kind}`} role="status">{settingsNotice.text}</div>}
+    {settingsNotice&&<div className={`settings-notice ${settingsNotice.kind}`} role="status">{settingsNotice.text}</div>}
+    <section className="panel appearance-settings"><div className="settings-heading"><div><h3>Appearance</h3><p>Choose the dashboard theme that is most comfortable to view.</p></div><span className="theme-selection">{theme==="dark"?"Dark":"Light"} theme</span></div><label className="theme-control"><span><strong>Dark mode</strong><small>Uses a near-black dashboard with high-contrast text and Kaspa teal highlights. This choice is saved in this browser.</small></span><input type="checkbox" role="switch" aria-label="Dark mode" checked={theme==="dark"} onChange={event=>selectTheme(event.target.checked?"dark":"light")}/><i aria-hidden="true"><b/></i></label></section>
    {settingsLoading&&!settings?<section className="panel settings-loading">Loading safe bridge settings…</section>:settings&&settingsModel?<>
     <section className="panel preset-panel"><div className="settings-heading"><div><h3>Choose a setup</h3><p>You can return to a recommended setup at any time.</p></div></div><div className="preset-grid">
      <button className={settings.preset==="automatic"?"selected":""} onClick={()=>choosePreset("automatic")}><strong>Automatic</strong><small>Recommended</small><span>Safe adaptive difficulty for modern Kaspa ASIC miners.</span></button>
@@ -158,3 +167,4 @@ export default function Home(){
   </section>
  </main>
 }
+
