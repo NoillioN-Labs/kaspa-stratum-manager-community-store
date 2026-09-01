@@ -2,7 +2,7 @@ manifestVersion: 1.1
 id: kaspa-stratum-manager
 category: kaspa
 name: Kaspa Stratum Manager
-version: "1.2.2"
+version: "1.2.3"
 tagline: Manage Kaspa solo mining locally
 icon: https://raw.githubusercontent.com/NoillioN-Labs/kaspa-stratum-manager-community-store/main/kaspa-stratum-manager/icon.svg
 description: >-
