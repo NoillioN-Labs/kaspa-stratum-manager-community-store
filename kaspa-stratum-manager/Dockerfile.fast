@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Fast Push reuses the bridge and runtime from the last full, immutable release.
-FROM ghcr.io/noillion-labs/kaspa-stratum-manager:1.2.0@sha256:25a0d38c103570cccf701ea36d829a4ce68c3281fb1ee1de96ec4c2b0b7f1615 AS release-base
+FROM ghcr.io/noillion-labs/kaspa-stratum-manager:1.2.1@sha256:a875272a45914ffc0ecc21a8267a09b6a8d7818c1edce390ffcfa854078535eb AS release-base
 
 FROM node:24.19.0-bookworm-slim AS app-build
 RUN apt-get update \
