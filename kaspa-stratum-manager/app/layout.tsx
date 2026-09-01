@@ -11,14 +11,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  colorScheme: "light",
+  colorScheme: "light dark",
   themeColor: "#10241f",
 };
 
+const themeBootScript = `(()=>{try{const key="kaspa-stratum-manager-theme";const saved=localStorage.getItem(key);document.documentElement.dataset.theme=saved==="dark"?"dark":"light"}catch{document.documentElement.dataset.theme="light"}})()`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeBootScript }} /></head>
       <body>{children}</body>
     </html>
   );
 }
+
