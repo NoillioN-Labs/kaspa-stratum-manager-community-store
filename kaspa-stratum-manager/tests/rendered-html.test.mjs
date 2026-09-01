@@ -59,6 +59,10 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Automatic is recommended for most miners/);
   assert.match(source, /Save and restart bridge/);
   assert.match(source, /Reset miner statistics/);
+  assert.match(source, /Dark mode/);
+  assert.match(source, /role="switch"/);
+  assert.match(source, /kaspa-stratum-manager-theme/);
+  assert.match(source, /saved in this browser/i);
   assert.match(source, /api\/manager\/statistics\/reset/);
   assert.match(source, /role="alertdialog"/);
   assert.match(source, /Delete all data/);
@@ -125,9 +129,12 @@ test("dashboard styles provide a readable iPhone layout", async () => {
   assert.match(styles, /\.performance-window-grid/);
   assert.match(styles, /\.share-activity span,\.outlook-inputs span\{display:flex;align-items:baseline;justify-content:flex-start/);
   assert.match(styles, /\.confirm-backdrop/);
+  assert.match(styles, /:root\[data-theme="dark"\]/);
+  assert.match(styles, /\.theme-control input:checked\+i/);
   assert.match(styles, /\.recent-blocks table,\.recent-blocks tbody/);
   assert.match(styles, /\.miners table,\.miners tbody,\.miners tr,\.miners td\{display:block/);
   assert.match(styles, /\.system-health \.health strong\{font-size:13px/);
   assert.match(styles, /\.log-search input\{min-height:44px;font-size:16px/);
   assert.match(styles, /@media \(max-width:380px\)/);
 });
+
