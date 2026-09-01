@@ -45,10 +45,17 @@ jobs:
         working-directory: kaspa-stratum-manager
         run: npm ci --no-audit --no-fund
 
+      - name: Detect the current package channel
+        working-directory: kaspa-stratum-manager
+        run: |
+          if grep -q 'kaspa-stratum-manager:fast@sha256:' docker-compose.yml; then
+            echo "KSM_PACKAGE_CHANNEL=fast" >> "$GITHUB_ENV"
+          else
+            echo "KSM_PACKAGE_CHANNEL=slow" >> "$GITHUB_ENV"
+          fi
+
       - name: Run full validation
         working-directory: kaspa-stratum-manager
-        env:
-          KSM_PACKAGE_CHANNEL: fast
         run: |
           npm test
           npm run lint
@@ -115,3 +122,4 @@ jobs:
           echo "Published multi-architecture image:" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ env.IMAGE }}:${{ inputs.version }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Platforms: linux/amd64, linux/arm64" >> "$GITHUB_STEP_SUMMARY"
+
