@@ -131,6 +131,11 @@ test("dashboard styles provide a readable iPhone layout", async () => {
   assert.match(styles, /\.confirm-backdrop/);
   assert.match(styles, /:root\[data-theme="dark"\]/);
   assert.match(styles, /\.theme-control input:checked\+i/);
+  assert.match(styles, /:root\[data-theme="dark"\] \.logs-summary article/);
+  assert.match(styles, /:root\[data-theme="dark"\] \.logs-intro>button/);
+  assert.match(styles, /:root\[data-theme="dark"\] \.diagnostics-banner button/);
+  assert.match(styles, /:root\[data-theme="dark"\] \.workspace-footer/);
+  assert.match(styles, /:root\[data-theme="dark"\] \.donation-popover/);
   assert.match(styles, /\.recent-blocks table,\.recent-blocks tbody/);
   assert.match(styles, /\.miners table,\.miners tbody,\.miners tr,\.miners td\{display:block/);
   assert.match(styles, /\.system-health \.health strong\{font-size:13px/);
