@@ -42,7 +42,7 @@ ARG APP_VERSION
 ARG KSM_DONATION_KASPA_ADDRESS=""
 ARG KSM_DONATION_BITCOIN_ADDRESS=""
 LABEL org.opencontainers.image.source="https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store" \
-      org.opencontainers.image.title="Kaspa Stratum Manager" \
+      org.opencontainers.image.title="Kaspa Solo Mining Console" \
       org.opencontainers.image.version="${APP_VERSION}" \
       io.kaspa.stratum-bridge.version="${RUSTY_KASPA_VERSION}" \
       io.kaspa.stratum-bridge.commit="${RUSTY_KASPA_COMMIT}"

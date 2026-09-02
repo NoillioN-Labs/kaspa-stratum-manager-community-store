@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kaspa Stratum Manager",
+  title: "Kaspa Solo Mining Console",
   description: "Manage local Kaspa solo mining from Umbrel.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
@@ -25,4 +25,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

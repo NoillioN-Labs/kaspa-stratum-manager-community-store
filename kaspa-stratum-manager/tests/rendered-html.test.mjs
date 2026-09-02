@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("renders Kaspa Stratum Manager metadata", async () => {
+test("renders Kaspa Solo Mining Console metadata", async () => {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
@@ -13,10 +13,10 @@ test("renders Kaspa Stratum Manager metadata", async () => {
   );
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /<title>Kaspa Stratum Manager<\/title>/i);
+  assert.match(html, /<title>Kaspa Solo Mining Console<\/title>/i);
   assert.match(html, /<link[^>]+rel="(?:shortcut )?icon"[^>]+href="\/favicon\.svg"/i);
   assert.match(html, /src="\/kaspa-logo\.svg"/i);
-  assert.match(html, />Stratum Bridge Manager<\/small>/i);
+  assert.match(html, />Solo Mining Console<\/small>/i);
   assert.doesNotMatch(html, /codex-preview/i);
 });
 
@@ -32,7 +32,7 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /setInterval\(refresh,5000\)/);
   assert.match(source, /api\/manager\/metrics/);
   assert.match(source, /setInterval\(loadDashboardMetrics,5_000\)/);
-  assert.match(source, /Recorded by manager/);
+  assert.doesNotMatch(source, /metrics\.map\([^\n]+<small/);
   assert.match(source, /Since manager records began/);
   assert.doesNotMatch(source, /setHashrateHistory/);
   assert.match(source, /combinedMinerHashrate/);
@@ -89,6 +89,15 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Average network hashrate/);
   assert.match(source, /Network blocks observed/);
   assert.match(source, /Per-miner 7-day outlook/);
+  assert.match(source, /Solo mining revenue analytics/);
+  assert.match(source, /Realised reward over time/);
+  assert.match(source, /DAG resolution/);
+  assert.match(source, /Block subsidy/);
+  assert.match(source, /Accepted fees/);
+  assert.match(source, /DAG rewards/);
+  assert.match(source, /Block reward ledger/);
+  assert.match(source, /api\/manager\/rewards\/summary/);
+  assert.match(source, /does not mean rewarded/i);
   assert.match(source, /Hashrate performance/);
   assert.match(source, /1-hour average/);
   assert.match(source, /6-hour average/);
@@ -116,6 +125,9 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /If something is not working/);
   assert.match(source, /aria-label="Stratum port"[^>]*disabled readOnly/);
   assert.match(source, /window\.location\.hostname/);
+  assert.match(source, /manager\?\.minerConnection\?\.host\|\|browserStratumHost/);
+  assert.match(source, />Light mode<\/span>/);
+  assert.match(source, />Dark mode<\/span>/);
   assert.doesNotMatch(source, /umbrel\.local/i);
 });
 
@@ -131,15 +143,18 @@ test("dashboard styles provide a readable iPhone layout", async () => {
   assert.match(styles, /\.confirm-backdrop/);
   assert.match(styles, /:root\[data-theme="dark"\]/);
   assert.match(styles, /\.theme-control input:checked\+i/);
+  assert.match(styles, /\.save-bar\{position:static/);
   assert.match(styles, /:root\[data-theme="dark"\] \.logs-summary article/);
   assert.match(styles, /:root\[data-theme="dark"\] \.logs-intro>button/);
   assert.match(styles, /:root\[data-theme="dark"\] \.diagnostics-banner button/);
   assert.match(styles, /:root\[data-theme="dark"\] \.workspace-footer/);
   assert.match(styles, /:root\[data-theme="dark"\] \.donation-popover/);
   assert.match(styles, /\.recent-blocks table,\.recent-blocks tbody/);
+  assert.match(styles, /\.reward-bars/);
+  assert.match(styles, /\.outcome-ring/);
+  assert.match(styles, /\.reward-blocks table,\.reward-blocks tbody/);
   assert.match(styles, /\.miners table,\.miners tbody,\.miners tr,\.miners td\{display:block/);
   assert.match(styles, /\.system-health \.health strong\{font-size:13px/);
   assert.match(styles, /\.log-search input\{min-height:44px;font-size:16px/);
   assert.match(styles, /@media \(max-width:380px\)/);
 });
-

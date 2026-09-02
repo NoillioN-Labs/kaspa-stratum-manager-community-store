@@ -1,4 +1,4 @@
-# Kaspa Stratum Manager architecture
+# Kaspa Solo Mining Console architecture
 
 The app runs on umbrelOS beside `rusty-kaspad`. ASIC miners connect over the
 LAN to TCP 5555. The GUI is exposed through Umbrel App Proxy.
@@ -48,8 +48,9 @@ freshness and rate from counter changes and reports stale/invalid quality only
 when the bridge supplies those counters. Luck compares confirmed blocks with
 expected blocks over the observed period. Round effort is the statistically
 expected work accumulated since the previous observed block; it may exceed
-100% and is not a completion percentage. Pool balances, payments, fiat values
-and wallet data are outside the manager's schema.
+100% and is not a completion percentage. Incomplete retained rounds are marked
+accordingly. Pool balances, payments, fiat values and wallet data are outside
+the manager's schema.
 
 ## Pinned bridge supply chain
 
@@ -76,6 +77,14 @@ manager container over Umbrel's private application network. Only the GUI is
 exposed through Umbrel App Proxy. TCP 5555 is published separately because ASIC
 miners must reach the Stratum listener directly over the LAN. It must not be
 forwarded by an internet-facing router.
+
+Umbrel evaluates the packaged `exports.sh` on the host and supplies its local
+address candidates to the manager at runtime. The manager accepts only a
+private IPv4 candidate, excludes loopback, link-local and Umbrel's internal
+application network, and returns the selected address in the sanitized status
+model. Overview, Miners and Diagnostics use it for the Stratum connection URL.
+The address is never written to `/data`, logs or source control; the browser's
+current hostname remains the fallback when no suitable LAN address is present.
 
 On first start, the container copies the managed default bridge configuration
 to `/data/config.yaml`. That persisted copy is retained across restarts and app

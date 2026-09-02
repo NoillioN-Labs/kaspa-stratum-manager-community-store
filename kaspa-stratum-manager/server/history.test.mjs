@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -56,7 +56,7 @@ test("prunes samples and block events outside the seven-day window", async () =>
   assert.equal(summary.sampleCount,1);
   assert.equal(summary.blocksFound,0);
   assert.equal(summary.recentBlocks.length,1);
-  assert.equal(summary.blockHistoryDays,90);
+  assert.equal(summary.blockHistoryDays,365);
   assert.deepEqual(summary.workers.map(({worker})=>worker),["current"]);
 });
 
@@ -124,5 +124,56 @@ test("atomically resets persisted mining history", async () => {
   assert.equal(summary.blocksFound,0);
   assert.deepEqual(summary.workers,[]);
   assert.deepEqual(summary.recentBlocks,[]);
-  assert.deepEqual(JSON.parse(await readFile(historyPath,"utf8")),{version:2,samples:[],blocks:[]});
+  assert.deepEqual(JSON.parse(await readFile(historyPath,"utf8")),{version:3,samples:[],blocks:[]});
+});
+
+test("migrates version-2 history to reward-aware version 3 without losing records", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-history-migration-"));
+  const historyPath = path.join(directory, "mining-history.json");
+  const now = Date.parse("2026-08-30T00:00:00Z");
+  await writeFile(historyPath, JSON.stringify({
+    version: 2,
+    samples: [{ timestamp: now, networkHashrate: 10, networkDifficulty: 20, networkBlockCount: 30, workers: [{ instance: "5555", worker: "RIG01", hashrateHs: 40 }] }],
+    blocks: [{ hash: "a".repeat(64), instance: "5555", worker: "RIG01", timestamp: now, networkDifficulty: 20, networkBlockCount: 30 }],
+  }));
+  const store = new MiningHistoryStore({ path: historyPath, now: () => now });
+  const blocks = await store.rewardBlocks();
+  assert.equal(blocks.length, 1);
+  assert.equal(blocks[0].rewardStatus, "unresolved");
+  assert.equal(blocks[0].totalRewardSompi, null);
+  await store.close();
+  const persisted = JSON.parse(await readFile(historyPath, "utf8"));
+  assert.equal(persisted.version, 3);
+  assert.equal(persisted.samples.length, 1);
+  assert.equal(persisted.blocks.length, 1);
+  assert.equal(persisted.blocks[0].rewardStatus, "unresolved");
+});
+
+test("persists exact reward strings and aggregates realised revenue without precision loss", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-history-reward-"));
+  const historyPath = path.join(directory, "mining-history.json");
+  const now = Date.parse("2026-08-30T00:00:00Z");
+  const store = new MiningHistoryStore({ path: historyPath, now: () => now });
+  await store.record({ workers: [{ worker: "RIG01", hashrate: 1 }], blocks: [{ worker: "RIG01", hash: "b".repeat(64) }] });
+  assert.equal(await store.updateBlockReward("b".repeat(64), {
+    rewardStatus: "blue",
+    blockColor: "blue",
+    confirmationCount: "42",
+    subsidySompi: "18446744073709551600",
+    acceptedTxFeesSompi: "10",
+    dagMergeRewardSompi: "5",
+    totalRewardSompi: "18446744073709551615",
+    rewardDecompositionVerified: true,
+    rewardResolvedAt: now,
+  }), true);
+  const summary = await store.rewardSummary();
+  assert.equal(summary.blueBlocks, 1);
+  assert.equal(summary.totalRewardSompi, "18446744073709551615");
+  assert.equal(summary.subsidySompi, "18446744073709551600");
+  assert.equal(summary.acceptedTxFeesSompi, "10");
+  assert.equal(summary.dagMergeRewardSompi, "5");
+  assert.equal(summary.decompositionCoverage, 1);
+  const [block] = await store.rewardBlocks();
+  assert.equal(block.confirmationCount, "42");
+  assert.equal(block.totalRewardSompi, "18446744073709551615");
 });

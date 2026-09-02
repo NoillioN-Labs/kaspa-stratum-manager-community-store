@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { atomicWrite } from "./settings.mjs";
 
 export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-export const BLOCK_HISTORY_MS = 90 * 24 * 60 * 60 * 1000;
+export const BLOCK_HISTORY_MS = 365 * 24 * 60 * 60 * 1000;
 
 const PERIODS = {
   oneHour: 60 * 60 * 1000,
@@ -19,6 +19,38 @@ const CHART_BUCKETS = {
 const finite = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
 const optionalFinite = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
 const text = (value) => typeof value === "string" ? value.trim() : "";
+const rewardStatuses = new Set(["unresolved", "unknown", "blue", "red", "error"]);
+const blockColors = new Set(["unknown", "blue", "red"]);
+const sompi = (value) => typeof value === "string" && /^(0|[1-9]\d*)$/.test(value) ? value : null;
+const nullableCount = (value) => sompi(typeof value === "number" ? String(value) : value);
+const rewardDefaults = () => ({
+  rewardStatus: "unresolved",
+  blockColor: "unknown",
+  confirmationCount: null,
+  mergingChainBlockHash: null,
+  subsidySompi: null,
+  acceptedTxFeesSompi: null,
+  dagMergeRewardSompi: null,
+  totalRewardSompi: null,
+  rewardDecompositionVerified: false,
+  rewardResolvedAt: null,
+  rewardLastCheckedAt: null,
+  rewardError: null,
+});
+const sanitizedReward = (source = {}) => ({
+  rewardStatus: rewardStatuses.has(source.rewardStatus) ? source.rewardStatus : "unresolved",
+  blockColor: blockColors.has(source.blockColor) ? source.blockColor : "unknown",
+  confirmationCount: nullableCount(source.confirmationCount),
+  mergingChainBlockHash: text(source.mergingChainBlockHash).toLowerCase() || null,
+  subsidySompi: sompi(source.subsidySompi),
+  acceptedTxFeesSompi: sompi(source.acceptedTxFeesSompi),
+  dagMergeRewardSompi: sompi(source.dagMergeRewardSompi),
+  totalRewardSompi: sompi(source.totalRewardSompi),
+  rewardDecompositionVerified: source.rewardDecompositionVerified === true,
+  rewardResolvedAt: Number.isFinite(Number(source.rewardResolvedAt)) ? Number(source.rewardResolvedAt) : null,
+  rewardLastCheckedAt: Number.isFinite(Number(source.rewardLastCheckedAt)) ? Number(source.rewardLastCheckedAt) : null,
+  rewardError: text(source.rewardError).slice(0, 500) || null,
+});
 const workerName = (worker) => text(worker?.worker || worker?.workerName || worker?.name);
 const workerKey = (instance, worker) => `${instance}\u0000${worker}`;
 const iso = (timestamp) => timestamp ? new Date(timestamp).toISOString() : null;
@@ -35,7 +67,7 @@ const counter = (source, names) => {
   return null;
 };
 const counterDelta = (left, right) => left === null || right === null ? null : right >= left ? right - left : right;
-const emptyData = () => ({ version: 2, samples: [], blocks: [] });
+const emptyData = () => ({ version: 3, samples: [], blocks: [] });
 
 const sanitizedWorker = (source, stored = false) => {
   const worker = workerName(source);
@@ -59,9 +91,9 @@ const sanitizedSample = (stats, timestamp) => ({
 });
 
 const validStoredData = (input) => {
-  if (!input || ![1, 2].includes(input.version) || !Array.isArray(input.samples) || !Array.isArray(input.blocks)) return emptyData();
+  if (!input || ![1, 2, 3].includes(input.version) || !Array.isArray(input.samples) || !Array.isArray(input.blocks)) return emptyData();
   return {
-    version: 2,
+    version: 3,
     samples: input.samples.filter((sample) => Number.isFinite(sample?.timestamp) && Array.isArray(sample?.workers)).map((sample) => ({
       timestamp: sample.timestamp,
       networkHashrate: finite(sample.networkHashrate),
@@ -80,6 +112,7 @@ const validStoredData = (input) => {
         timestamp: source.timestamp,
         networkDifficulty: finite(source.networkDifficulty),
         networkBlockCount: finite(source.networkBlockCount),
+        ...sanitizedReward(source),
       }];
     }),
   };
@@ -258,7 +291,11 @@ export class MiningHistoryStore {
 
   async loadUnlocked() {
     if (this.loaded) return;
-    try { this.data = validStoredData(JSON.parse(await readFile(this.path, "utf8"))); }
+    try {
+      const stored = JSON.parse(await readFile(this.path, "utf8"));
+      this.data = validStoredData(stored);
+      if (stored.version !== 3) this.dirty = true;
+    }
     catch (error) {
       if (error.code !== "ENOENT") this.onError(`Mining history could not be read and was reset: ${error.message}`);
       this.data = emptyData();
@@ -293,7 +330,7 @@ export class MiningHistoryStore {
         const hash = text(source?.hash);
         const worker = workerName(source);
         if (!hash || !worker || known.has(hash)) continue;
-        this.data.blocks.push({ hash, instance: text(source.instance), worker, timestamp: eventTime(source.timestamp, timestamp), networkDifficulty: finite(stats?.networkDifficulty), networkBlockCount: finite(stats?.networkBlockCount) });
+        this.data.blocks.push({ hash, instance: text(source.instance), worker, timestamp: eventTime(source.timestamp, timestamp), networkDifficulty: finite(stats?.networkDifficulty), networkBlockCount: finite(stats?.networkBlockCount), ...rewardDefaults() });
         known.add(hash);
         addedBlock = true;
       }
@@ -342,7 +379,7 @@ export class MiningHistoryStore {
         const start = previous?.timestamp ?? samplesInWindow[0]?.timestamp ?? block.timestamp;
         const effort = expectedBetween(this.data.samples, start, block.timestamp, this.sampleIntervalMs);
         const completeRound = Boolean(previous && start >= (this.data.samples[0]?.timestamp ?? start));
-        return { instance: block.instance, worker: block.worker, timestamp: iso(block.timestamp), networkDifficulty: block.networkDifficulty, networkBlockCount: block.networkBlockCount, effortPercent: effort > 0 ? effort * 100 : null, completeRound };
+        return { hash: block.hash, instance: block.instance, worker: block.worker, timestamp: iso(block.timestamp), networkDifficulty: block.networkDifficulty, networkBlockCount: block.networkBlockCount, effortPercent: effort > 0 ? effort * 100 : null, completeRound, ...sanitizedReward(block) };
       });
       const lastBlock = blockEvents.at(-1);
       const roundStart = lastBlock?.timestamp ?? samplesInWindow[0]?.timestamp ?? null;
@@ -386,6 +423,87 @@ export class MiningHistoryStore {
       this.data = emptyData();
       this.dirty = true;
       await this.flushUnlocked(true);
+    });
+  }
+
+  rewardBlocks(limit = 100) {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      const safeLimit = Math.min(1_000, Math.max(1, Number(limit) || 100));
+      return [...this.data.blocks].sort((left, right) => right.timestamp - left.timestamp).slice(0, safeLimit).map((block) => ({
+        hash: block.hash,
+        instance: block.instance,
+        worker: block.worker,
+        timestamp: iso(block.timestamp),
+        ...sanitizedReward(block),
+      }));
+    });
+  }
+
+  unresolvedRewardBlocks(limit = 20) {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+      return this.data.blocks.filter(({ rewardStatus }) => ["unresolved", "unknown", "error"].includes(rewardStatus)).sort((left, right) => left.timestamp - right.timestamp).slice(0, safeLimit).map((block) => ({ hash: block.hash, rewardStatus: block.rewardStatus, rewardLastCheckedAt: block.rewardLastCheckedAt }));
+    });
+  }
+
+  updateBlockReward(value, patch) {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      const hash = text(value).toLowerCase();
+      const block = this.data.blocks.find((candidate) => candidate.hash.toLowerCase() === hash);
+      if (!block) return false;
+      Object.assign(block, sanitizedReward({ ...block, ...patch }));
+      this.dirty = true;
+      await this.flushUnlocked(true);
+      return true;
+    });
+  }
+
+  rewardSummary(windowMs = this.blockRetentionMs) {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      const now = this.now();
+      const duration = Math.min(Math.max(Number(windowMs) || SEVEN_DAYS_MS, 60_000), this.blockRetentionMs);
+      const blocks = this.data.blocks.filter(({ timestamp }) => timestamp >= now - duration);
+      const totals = { subsidy: 0n, fees: 0n, dag: 0n, realised: 0n };
+      let blue = 0; let red = 0; let pending = 0; let errors = 0; let decomposed = 0;
+      const buckets = new Map();
+      for (const block of blocks) {
+        if (block.rewardStatus === "blue") blue += 1;
+        else if (block.rewardStatus === "red") red += 1;
+        else if (block.rewardStatus === "error") errors += 1;
+        else pending += 1;
+        const total = sompi(block.totalRewardSompi);
+        if (total !== null) totals.realised += BigInt(total);
+        if (block.rewardDecompositionVerified) {
+          decomposed += 1;
+          totals.subsidy += BigInt(sompi(block.subsidySompi) ?? "0");
+          totals.fees += BigInt(sompi(block.acceptedTxFeesSompi) ?? "0");
+          totals.dag += BigInt(sompi(block.dagMergeRewardSompi) ?? "0");
+        }
+        const bucketTimestamp = Math.floor(block.timestamp / 86_400_000) * 86_400_000;
+        const bucket = buckets.get(bucketTimestamp) ?? { timestamp: iso(bucketTimestamp), blocks: 0, totalRewardSompi: 0n };
+        bucket.blocks += 1;
+        if (total !== null) bucket.totalRewardSompi += BigInt(total);
+        buckets.set(bucketTimestamp, bucket);
+      }
+      return {
+        periodSeconds: duration / 1000,
+        blocksFound: blocks.length,
+        blueBlocks: blue,
+        redBlocks: red,
+        pendingBlocks: pending,
+        errorBlocks: errors,
+        subsidySompi: totals.subsidy.toString(),
+        acceptedTxFeesSompi: totals.fees.toString(),
+        dagMergeRewardSompi: totals.dag.toString(),
+        totalRewardSompi: totals.realised.toString(),
+        decompositionCoverage: blue > 0 ? decomposed / blue : null,
+        feeShare: totals.realised > 0n ? Number(totals.fees * 1_000_000n / totals.realised) / 1_000_000 : null,
+        daily: [...buckets.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp)).map((bucket) => ({ ...bucket, totalRewardSompi: bucket.totalRewardSompi.toString() })),
+      };
     });
   }
 
