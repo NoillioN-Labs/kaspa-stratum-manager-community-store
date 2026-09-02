@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Application-only builds reuse the bridge and runtime from the last immutable release.
-FROM ghcr.io/noillion-labs/kaspa-stratum-manager:1.0.0@sha256:3252533fef8a2e0ac360a8348b09c0ddb673b1f18dfec97b80bd04af03bb408f AS release-base
+FROM ghcr.io/noillion-labs/kaspa-stratum-manager:1.3.0@sha256:fe7075cd5897c2cb20291728213f59b9c325912f48ffce2268b0bbb439ef8fd7 AS release-base
 
 FROM node:24.19.0-bookworm-slim AS app-build
 RUN apt-get update \
