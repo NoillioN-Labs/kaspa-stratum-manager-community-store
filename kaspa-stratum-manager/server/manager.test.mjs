@@ -5,7 +5,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createManager } from "./manager.mjs";
+import { createManager, selectMinerConnectionHost } from "./manager.mjs";
 import { AUTOMATIC_SETTINGS } from "./settings.mjs";
 
 const listen = (server) => new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server.address().port)));
@@ -45,6 +45,14 @@ const putSettings = (port, body) => fetch(`http://127.0.0.1:${port}/api/manager/
   method:"PUT", headers:{"content-type":"application/json"}, body:JSON.stringify(body),
 });
 
+test("selects a runtime LAN address without exposing Umbrel's internal network", () => {
+  const internal = [10,21,4,7].join(".");
+  const lan = [192,168,50,24].join(".");
+  assert.equal(selectMinerConnectionHost(`${internal},${lan}`),lan);
+  assert.equal(selectMinerConnectionHost("127.0.0.1,169.254.2.4"),"");
+  assert.equal(selectMinerConnectionHost("device.local"),"");
+});
+
 test("reports a reachable Umbrel node and bridge API", async (t) => {
   const node = net.createServer(); const nodePort = await listen(node);
   const stratum = net.createServer(); const stratumPort = await listen(stratum);
@@ -57,6 +65,7 @@ test("reports a reachable Umbrel node and bridge API", async (t) => {
     listenHost:"127.0.0.1", listenPort:0, appVersion:"0.3.3", bridgeVersion:"2.0.1", profile:"test",
     nodeEndpoint:{host:"127.0.0.1",port:nodePort}, stratumEndpoint:{host:"127.0.0.1",port:stratumPort}, bridgeApiUrl:`http://127.0.0.1:${bridgePort}`,
     bridgeCommand:"", bridgeArgs:[], bridgeWorkingDirectory:"", bridgeEnv:{},
+    minerConnectionHost:[192,168,50,24].join("."),
     probeTimeoutMs:500, stopTimeoutMs:100, allowedOrigin:"http://localhost:3000",
   });
   const managerPort = await listen(manager.server);
@@ -67,6 +76,8 @@ test("reports a reachable Umbrel node and bridge API", async (t) => {
   assert.equal(status.bridgeVersion,"2.0.1");
   assert.equal(status.stratum.reachable,true);
   assert.equal(status.stratum.port,stratumPort);
+  assert.equal(status.minerConnection.host,[192,168,50,24].join("."));
+  assert.equal(status.minerConnection.source,"umbrel-runtime");
   assert.equal(status.bridge.api.status.kaspad_version,"2.0.1");
   const stats = await fetch(`http://127.0.0.1:${managerPort}/api/manager/stats`).then(r=>r.json());
   assert.equal(stats.activeWorkers,2);
@@ -142,7 +153,8 @@ test("returns sanitized durable mining history and block outlook", async (t) => 
   const manager = createManager(testConfig(directory), { supervisor:fakeSupervisor() });
   const started = Date.now()-60_000;
   const first = {networkHashrate:1e12,networkBlockCount:100,workers:[{instance:"5555",worker:"RIG01",wallet:"private",hashrate:10}],blocks:[]};
-  const second = {networkHashrate:1e12,networkBlockCount:101,workers:[{instance:"5555",worker:"RIG01",wallet:"private",hashrate:10}],blocks:[{instance:"5555",worker:"RIG01",wallet:"private",hash:"block-a",timestamp:String((started+60_000)/1000)}]};
+  const blockHash = "a".repeat(64);
+  const second = {networkHashrate:1e12,networkBlockCount:101,workers:[{instance:"5555",worker:"RIG01",wallet:"private",hashrate:10}],blocks:[{instance:"5555",worker:"RIG01",wallet:"private",hash:blockHash,timestamp:String((started+60_000)/1000)}]};
   await manager.history.record(first,started);
   await manager.history.record(second,started+60_000);
   const port=await listen(manager.server);
@@ -162,8 +174,44 @@ test("returns sanitized durable mining history and block outlook", async (t) => 
   assert.equal(body.recentBlocks.length,1);
   assert.equal(body.recentBlocks[0].worker,"RIG01");
   assert.equal(body.recentBlocks[0].networkBlockCount,101);
-  assert.equal(Object.hasOwn(body.recentBlocks[0],"hash"),false);
-  assert.doesNotMatch(JSON.stringify(body),/wallet|private|block-a/);
+  assert.equal(body.recentBlocks[0].hash,blockHash);
+  assert.equal(body.recentBlocks[0].rewardStatus,"unresolved");
+  assert.doesNotMatch(JSON.stringify(body),/wallet|private/);
+});
+
+test("resolves local blocks through Kaspad and exposes exact reward analytics", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kaspa-manager-rewards-"));
+  const config = testConfig(directory);
+  config.rewardAnalyticsEnabled = true;
+  config.rewardPollIntervalMs = 60_000;
+  const blockHash = "c".repeat(64);
+  const mergingHash = "d".repeat(64);
+  const payload = Buffer.alloc(16); payload.writeBigUInt64LE(90n,8);
+  let closed = false;
+  const rewardRpc = {
+    getServerInfo: async () => ({ serverVersion:"2.0.1", networkId:"mainnet", isSynced:true }),
+    getBlockRewardInfo: async (hash) => ({ hash, blockColor:"blue", confirmationCount:"12", mergingChainBlockHash:mergingHash, rewardAmountSompi:"9007199254740993" }),
+    getBlock: async (hash) => hash===blockHash?{transactions:[{payload:payload.toString("hex")}]}:{verboseData:{mergeSetBluesHashes:[blockHash]},transactions:[{outputs:[{amount:"100"}]}]},
+    close: () => { closed = true; },
+  };
+  const manager = createManager(config, { supervisor:fakeSupervisor(), rewardRpc });
+  await manager.history.record({ workers:[{worker:"RIG01",hashrate:1}], blocks:[{worker:"RIG01",hash:blockHash}] });
+  await manager.resolveRewards();
+  const port = await listen(manager.server);
+  t.after(async()=>{await manager.close();await close(manager.server);assert.equal(closed,true);});
+
+  const health = await fetch(`http://127.0.0.1:${port}/api/manager/rewards/health`).then(response=>response.json());
+  assert.equal(health.mode,"full");
+  assert.equal(health.serverVersion,"2.0.1");
+  const summary = await fetch(`http://127.0.0.1:${port}/api/manager/rewards/summary?period=7d`).then(response=>response.json());
+  assert.equal(summary.blueBlocks,1);
+  assert.equal(summary.totalRewardSompi,"9007199254740993");
+  assert.equal(summary.subsidySompi,"90");
+  assert.equal(summary.acceptedTxFeesSompi,"10");
+  assert.equal(summary.dagMergeRewardSompi,"9007199254740893");
+  const blocks = await fetch(`http://127.0.0.1:${port}/api/manager/rewards/blocks`).then(response=>response.json());
+  assert.equal(blocks.blocks[0].rewardStatus,"blue");
+  assert.equal(blocks.blocks[0].confirmationCount,"12");
 });
 
 test("requires confirmation and resets all retained miner statistics", async (t) => {

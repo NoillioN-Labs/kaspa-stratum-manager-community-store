@@ -42,6 +42,7 @@ services:
       BRIDGE_WORKING_DIRECTORY: /data
       RKSTRATUM_ALLOW_CONFIG_WRITE: "0"
       DATA_DIR: /data
+      UMBREL_LOCAL_IPS: ${APP_KASPA_STRATUM_MANAGER_LOCAL_IPS:-}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/api/manager/status').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s

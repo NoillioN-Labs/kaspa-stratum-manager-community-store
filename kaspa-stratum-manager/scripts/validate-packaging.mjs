@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [dockerfile, compose, manifest, config, route, entrypoint, preStart, packageLock, manager, settings, history, dashboardMetrics] = await Promise.all([
+const [dockerfile, compose, manifest, config, route, entrypoint, preStart, packageLock, manager, settings, history, dashboardMetrics, exportsHook, kaspaRpc, rewards] = await Promise.all([
   read("Dockerfile"), read("docker-compose.yml"), read("umbrel-app.yml"),
   read("config/bridge.yaml"),
   read("app/api/manager/[...path]/route.ts"), read("docker/entrypoint.sh"), read("hooks/pre-start"),
   read("package-lock.json"), read("server/manager.mjs"), read("server/settings.mjs"), read("server/history.mjs"), read("server/metrics.mjs"),
+  read("exports.sh"), read("server/kaspa-rpc.mjs"), read("server/rewards.mjs"),
 ]);
 
 const parsedPackageLock = JSON.parse(packageLock);
@@ -31,6 +32,9 @@ assert.match(manifest, /releaseNotes: >-\r?\n  Minor bug fixes and improvements\
 assert.doesNotMatch(manifest, /fast push|slow push|sanitized public source|test build/i);
 assert.match(compose, new RegExp(`^\\s+APP_VERSION: "${milestoneVersion.replace(/\./g, "\\.")}"$`, "m"));
 assert.match(compose, /^\s+BRIDGE_VERSION: "2\.0\.1"$/m);
+assert.match(compose, /UMBREL_LOCAL_IPS: \$\{APP_KASPA_STRATUM_MANAGER_LOCAL_IPS:-\}/);
+assert.match(exportsHook, /APP_KASPA_STRATUM_MANAGER_LOCAL_IPS/);
+assert.match(exportsHook, /hostname --all-ip-addresses/);
 const expectedImageTag = process.env.KSM_PACKAGE_CHANNEL === "fast" ? "fast" : milestoneVersion;
 assert.equal(pinnedImages[0].split("@")[0], `ghcr.io/noillion-labs/kaspa-stratum-manager:${expectedImageTag}`);
 assert.match(pinnedImages[0], /@sha256:[a-f0-9]{64}$/);
@@ -51,12 +55,11 @@ assert.match(manager, /KSM_DONATION_BITCOIN_ADDRESS/);
 assert.match(dockerfile, /ARG KSM_DONATION_KASPA_ADDRESS/);
 assert.match(dockerfile, /ARG KSM_DONATION_BITCOIN_ADDRESS/);
 assert.match(history, /SEVEN_DAYS_MS/);
-assert.match(history, /BLOCK_HISTORY_MS/);
 assert.match(history, /probabilityNextWindow/);
-assert.match(history, /currentRoundEffortPercent/);
-assert.match(history, /recentBlocks/);
-assert.match(history, /oneHour/);
-assert.match(history, /twentyFourHours/);
+assert.match(history, /rewardSummary/);
+assert.match(manager, /\/api\/manager\/rewards\/summary/);
+assert.match(kaspaRpc, /getBlockRewardInfoRequest/);
+assert.match(rewards, /acceptedTxFeesSompi/);
 assert.doesNotMatch(history, /wallet|password|credential/i);
 assert.match(dashboardMetrics, /TEN_MINUTES_MS/);
 assert.match(dashboardMetrics, /acceptedSharesTotal/);

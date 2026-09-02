@@ -11,13 +11,16 @@
     "build": "bash scripts/build-verified.sh",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "manager:dev": "node --env-file-if-exists=.env.local server/manager.mjs",
+    "spike:reward-rpc": "node server/../scripts/spike-kaspa-reward-rpc.mjs",
     "test:manager": "node --test server/manager.test.mjs",
     "test:packaging": "node scripts/validate-packaging.mjs",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs server/manager.test.mjs server/history.test.mjs server/metrics.test.mjs && npm run test:packaging",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs server/manager.test.mjs server/history.test.mjs server/metrics.test.mjs server/kaspa-rpc.test.mjs server/rewards.test.mjs && npm run test:packaging",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
   },
   "dependencies": {
+    "@grpc/grpc-js": "1.14.1",
+    "@grpc/proto-loader": "0.8.0",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.6",
@@ -42,5 +45,5 @@
     "wrangler": "4.92.0"
   },
   "type": "module",
-  "displayName": "Kaspa Stratum Manager"
+  "displayName": "Kaspa Solo Mining Console"
 }

@@ -9,6 +9,8 @@ import {
 } from "./settings.mjs";
 import { MiningHistoryStore, SEVEN_DAYS_MS } from "./history.mjs";
 import { DashboardMetricsStore, TEN_MINUTES_MS } from "./metrics.mjs";
+import { KaspaRpcAdapter } from "./kaspa-rpc.mjs";
+import { decomposeBlockReward } from "./rewards.mjs";
 
 const json = (res, status, body, origin = "") => {
   res.writeHead(status, {
@@ -24,6 +26,27 @@ const parseEndpoint = (value, defaultPort) => {
   const split = input.lastIndexOf(":");
   if (split < 1) return { host: input || "127.0.0.1", port: defaultPort };
   return { host: input.slice(0, split), port: Number(input.slice(split + 1)) || defaultPort };
+};
+
+const parseIpv4 = (value) => {
+  const parts = String(value || "").trim().split(".");
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return null;
+  const numbers = parts.map(Number);
+  return numbers.some((part) => part > 255) ? null : numbers;
+};
+
+export const selectMinerConnectionHost = (value) => {
+  const candidates = String(value || "").split(/[\s,]+/).map((candidate) => candidate.trim()).filter(Boolean);
+  for (const candidate of candidates) {
+    const address = candidate.replace(/^https?:\/\//, "").replace(/:\d+$/, "");
+    const parts = parseIpv4(address);
+    if (!parts) continue;
+    const [first, second] = parts;
+    const isPrivate = first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+    const isUmbrelInternalNetwork = first === 10 && second === 21;
+    if (isPrivate && !isUmbrelInternalNetwork) return address;
+  }
+  return "";
 };
 
 const tcpProbe = ({ host, port }, timeoutMs) =>
@@ -167,10 +190,14 @@ export const loadConfig = (env = process.env) => {
     historyRetentionMs: Number(env.HISTORY_RETENTION_MS || SEVEN_DAYS_MS),
     historySampleIntervalMs: Number(env.HISTORY_SAMPLE_INTERVAL_MS || 60000),
     historyFlushIntervalMs: Number(env.HISTORY_FLUSH_INTERVAL_MS || 300000),
+    rewardAnalyticsEnabled: env.KASPA_REWARD_ANALYTICS_ENABLED !== "false",
+    rewardRpcTimeoutMs: Number(env.KASPA_REWARD_RPC_TIMEOUT_MS || 5000),
+    rewardPollIntervalMs: Number(env.KASPA_REWARD_POLL_INTERVAL_MS || 30000),
     metricsPath: env.DASHBOARD_METRICS_PATH || `${env.DATA_DIR || "/data"}/dashboard-metrics.json`,
     metricsRetentionMs: Number(env.DASHBOARD_METRICS_RETENTION_MS || TEN_MINUTES_MS),
     metricsSampleIntervalMs: Number(env.DASHBOARD_METRICS_SAMPLE_INTERVAL_MS || 5000),
     metricsFlushIntervalMs: Number(env.DASHBOARD_METRICS_FLUSH_INTERVAL_MS || 30000),
+    minerConnectionHost: selectMinerConnectionHost(env.UMBREL_LOCAL_IPS),
     donationKaspaAddress: env.KSM_DONATION_KASPA_ADDRESS || "",
     donationBitcoinAddress: env.KSM_DONATION_BITCOIN_ADDRESS || "",
     allowedOrigin: env.DEV_ALLOWED_ORIGIN || "http://localhost:3000",
@@ -207,10 +234,26 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     flushIntervalMs: config.metricsFlushIntervalMs || 30_000,
     onError: (message) => logs.add("manager", message),
   });
+  const rewardRpc = dependencies.rewardRpc || (config.rewardAnalyticsEnabled ? new KaspaRpcAdapter({
+    endpoint: `${config.nodeEndpoint.host}:${config.nodeEndpoint.port}`,
+    timeoutMs: config.rewardRpcTimeoutMs,
+  }) : null);
+  const rewardHealth = {
+    enabled: Boolean(rewardRpc),
+    mode: rewardRpc ? "checking" : "disabled",
+    serverVersion: null,
+    networkId: null,
+    isSynced: null,
+    lastCheckedAt: null,
+    lastSuccessAt: null,
+    error: null,
+  };
   let historyTimer = null;
   let historySample = null;
   let metricsTimer = null;
   let metricsSample = null;
+  let rewardTimer = null;
+  let rewardSample = null;
   const serializeSettingsWrite = serialQueue();
   const serializeStatisticsReset = serialQueue();
   const waitForBridgeHealthy = dependencies.waitForBridgeHealthy || (async () => {
@@ -300,6 +343,64 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
     await metricsSample?.catch(() => {});
     await metrics.close().catch((error) => logs.add("manager", `Dashboard metrics could not be saved: ${error.message}`));
   };
+  const resolveRewards = async () => {
+    if (!rewardRpc) return;
+    rewardHealth.lastCheckedAt = new Date().toISOString();
+    try {
+      const server = await rewardRpc.getServerInfo();
+      rewardHealth.mode = "total_only";
+      rewardHealth.serverVersion = server.serverVersion ?? null;
+      rewardHealth.networkId = server.networkId ?? null;
+      rewardHealth.isSynced = server.isSynced ?? null;
+      rewardHealth.error = null;
+      for (const block of await history.unresolvedRewardBlocks(4)) {
+        const checkedAt = Date.now();
+        try {
+          const info = await rewardRpc.getBlockRewardInfo(block.hash);
+          if (info.blockColor === "unknown") {
+            await history.updateBlockReward(block.hash, { rewardStatus: "unknown", blockColor: "unknown", rewardLastCheckedAt: checkedAt, rewardError: null });
+          } else if (info.blockColor === "red") {
+            await history.updateBlockReward(block.hash, { rewardStatus: "red", blockColor: "red", confirmationCount: info.confirmationCount, mergingChainBlockHash: info.mergingChainBlockHash, totalRewardSompi: "0", rewardResolvedAt: checkedAt, rewardLastCheckedAt: checkedAt, rewardError: null });
+          } else if (info.blockColor === "blue" && info.rewardAmountSompi !== null) {
+            let decomposition = {};
+            let decompositionError = null;
+            try {
+              const [queriedBlock, mergingBlock] = await Promise.all([rewardRpc.getBlock(block.hash, true), rewardRpc.getBlock(info.mergingChainBlockHash, true)]);
+              decomposition = decomposeBlockReward({ hash:block.hash, totalRewardSompi:info.rewardAmountSompi, queriedBlock, mergingBlock });
+              rewardHealth.mode = "full";
+            } catch (error) {
+              decompositionError = error.message;
+              logs.add("manager", `Reward components for ${block.hash.slice(0, 12)}… are incomplete: ${error.message}`);
+            }
+            await history.updateBlockReward(block.hash, { rewardStatus: "blue", blockColor: "blue", confirmationCount: info.confirmationCount, mergingChainBlockHash: info.mergingChainBlockHash, totalRewardSompi: info.rewardAmountSompi, rewardResolvedAt: checkedAt, rewardLastCheckedAt: checkedAt, rewardError: decompositionError, ...decomposition });
+          } else {
+            await history.updateBlockReward(block.hash, { rewardStatus: "error", rewardLastCheckedAt: checkedAt, rewardError: "Kaspad returned incomplete reward information." });
+          }
+        } catch (error) {
+          await history.updateBlockReward(block.hash, { rewardStatus: "error", rewardLastCheckedAt: checkedAt, rewardError: error.message });
+          logs.add("manager", `Reward lookup for ${block.hash.slice(0, 12)}… will retry: ${error.message}`);
+        }
+      }
+      rewardHealth.lastSuccessAt = new Date().toISOString();
+    } catch (error) {
+      rewardHealth.mode = "basic";
+      rewardHealth.error = error.message;
+      logs.add("manager", `Reward analytics is temporarily unavailable: ${error.message}`);
+    }
+  };
+  const startRewards = async () => {
+    if (!rewardRpc || rewardTimer) return;
+    rewardSample = resolveRewards();
+    await rewardSample;
+    rewardTimer = setInterval(() => { rewardSample = resolveRewards(); }, config.rewardPollIntervalMs);
+    rewardTimer.unref?.();
+  };
+  const stopRewards = async () => {
+    if (rewardTimer) clearInterval(rewardTimer);
+    rewardTimer = null;
+    await rewardSample?.catch(() => {});
+    rewardRpc?.close?.();
+  };
 
   const handler = async (req, res) => {
     const origin = req.headers.origin === config.allowedOrigin ? config.allowedOrigin : "";
@@ -329,6 +430,10 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
           profile: config.profile,
           node: { endpoint: `${config.nodeEndpoint.host}:${config.nodeEndpoint.port}`, ...node },
           stratum: { port: config.stratumEndpoint?.port || 5555, ...stratum },
+          minerConnection: {
+            host: config.minerConnectionHost || null,
+            source: config.minerConnectionHost ? "umbrel-runtime" : "browser-fallback",
+          },
           bridge: { ...supervisor.state(), api_url: config.bridgeApiUrl, api: bridgeApi },
           checked_at: new Date().toISOString(),
         };
@@ -339,6 +444,16 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
       }
       if (req.method === "GET" && url.pathname === "/api/manager/history") {
         return json(res, 200, await history.summary(), origin);
+      }
+      if (req.method === "GET" && url.pathname === "/api/manager/rewards/health") {
+        return json(res, 200, rewardHealth, origin);
+      }
+      if (req.method === "GET" && url.pathname === "/api/manager/rewards/summary") {
+        const periods = { "1h": 3_600_000, "6h": 21_600_000, "24h": 86_400_000, "7d": SEVEN_DAYS_MS, lifetime: Number.MAX_SAFE_INTEGER };
+        return json(res, 200, await history.rewardSummary(periods[url.searchParams.get("period")] || SEVEN_DAYS_MS), origin);
+      }
+      if (req.method === "GET" && url.pathname === "/api/manager/rewards/blocks") {
+        return json(res, 200, { blocks: await history.rewardBlocks(Number(url.searchParams.get("limit") || 100)) }, origin);
       }
       if (req.method === "GET" && url.pathname === "/api/manager/metrics") {
         return json(res, 200, await metrics.summary(), origin);
@@ -372,9 +487,9 @@ export const createManager = (config = loadConfig(), dependencies = {}) => {
   };
 
   return {
-    config, logs, supervisor, history, metrics, sampleHistory, startHistory, stopHistory, sampleMetrics, startMetrics, stopMetrics,
+    config, logs, supervisor, history, metrics, rewardHealth, resolveRewards, startRewards, stopRewards, sampleHistory, startHistory, stopHistory, sampleMetrics, startMetrics, stopMetrics,
     server: http.createServer(handler),
-    async close() { await Promise.all([stopHistory(), stopMetrics()]); await supervisor.stop(); },
+    async close() { await Promise.all([stopHistory(), stopMetrics(), stopRewards()]); await supervisor.stop(); },
   };
 };
 
@@ -386,7 +501,7 @@ if (isMain) {
     if (manager.supervisor.managed) {
       try { await manager.supervisor.start(); } catch (error) { manager.logs.add("manager", error.message); }
     }
-    await Promise.all([manager.startHistory(), manager.startMetrics()]);
+    await Promise.all([manager.startHistory(), manager.startMetrics(), manager.startRewards()]);
   });
   const shutdown = async () => { await manager.close(); manager.server.close(() => process.exit(0)); };
   process.on("SIGINT", shutdown); process.on("SIGTERM", shutdown);

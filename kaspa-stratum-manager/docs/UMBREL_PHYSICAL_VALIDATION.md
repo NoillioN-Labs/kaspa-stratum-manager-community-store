@@ -2,20 +2,20 @@
 
 Validation date: 29 August 2026  
 Public milestone: `0.3.0`  
-Public source commit: `a6c130860ddfd0488552329e494a4ad4190d162b`
-
-This record intentionally excludes private host addresses, wallet addresses,
-credentials, secrets and raw environment data.
+Public milestone commit: `88eaabb0093d487eaa1b0a0592fabf8b3d91cbb6`
 
 Confirmed device results below were completed through milestone `0.2.6`.
 Milestone `0.3.0` is published but has not yet completed the physical Settings
-acceptance gates.
+persistence and miner reconnection gate.
+
+This record intentionally excludes private host addresses, wallet addresses,
+credentials, secrets and raw environment data.
 
 ## Confirmed
 
 - The NoillioN Labs Community App Store loaded on the physical x86_64 Umbrel.
 - Umbrel recognized the installed Rusty Kaspad dependency.
-- Kaspa Stratum Manager built and installed successfully.
+- Kaspa Solo Mining Console built and installed successfully.
 - Umbrel App Proxy served the production GUI.
 - The runtime profile reported `umbrel`.
 - The existing Rusty Kaspad v2.0.1 node was reachable and active.

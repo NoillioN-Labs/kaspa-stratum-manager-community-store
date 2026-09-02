@@ -36,7 +36,7 @@ or SSH key.
 
 ## 2. Install the milestone
 
-Open the NoillioN Labs store, select **Kaspa Stratum Manager**, and choose
+Open the NoillioN Labs store, select **Kaspa Solo Mining Console**, and choose
 **Install**. Milestone `0.3.0` pulls a public linux/amd64 image pinned to an
 immutable digest. Umbrel does not compile Rusty Kaspa locally during normal
 installation or updates.
@@ -49,7 +49,7 @@ GitHub.
 
 After Umbrel reports success:
 
-1. Open Kaspa Stratum Manager from the Umbrel interface and confirm the normal
+1. Open Kaspa Solo Mining Console from the Umbrel interface and confirm the normal
    Umbrel sign-in protects it.
 2. Confirm the GUI loads and reports the node connected and synchronized.
 3. Confirm the bridge is running and the status/statistics views load.
@@ -87,6 +87,6 @@ environment dumps or raw configuration containing private values.
 
 ## Rollback
 
-If the milestone causes a problem, stop or uninstall only Kaspa Stratum Manager
+If the milestone causes a problem, stop or uninstall only Kaspa Solo Mining Console
 through the Umbrel UI. Preserve any required sanitized diagnostic evidence
 before uninstalling. Do not remove or modify Rusty Kaspad.
