@@ -4,7 +4,7 @@ This runbook installs a sanitized public milestone on an x86_64 umbrelOS
 computer beside the official Rusty Kaspad app. The authoritative development
 repository remains private; testable milestones are periodically exported to:
 
-https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+https://github.com/NoillioN-Labs/umbrel-community-app-store
 
 Do not paste private LAN addresses, wallet addresses, passwords, tokens, seed
 phrases or other secrets into either repository, command transcripts, issues or
@@ -26,7 +26,7 @@ In the Umbrel web interface:
 3. Choose **Add**.
 4. Enter this repository URL:
 
-       https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+       https://github.com/NoillioN-Labs/umbrel-community-app-store
 
 5. Wait for the **NoillioN Labs** store to appear.
 

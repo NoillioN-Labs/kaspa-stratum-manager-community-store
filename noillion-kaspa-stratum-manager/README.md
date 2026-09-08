@@ -1,4 +1,8 @@
-# NoillioN Labs Umbrel Community App Store
+# Kaspa Solo Mining Console
+
+The canonical NoillioN Labs Umbrel Community App Store is:
+
+https://github.com/NoillioN-Labs/umbrel-community-app-store
 
 This community store publishes **Kaspa Solo Mining Console**, a local-first
 Umbrel application for running, managing and understanding Kaspa solo mining
@@ -25,7 +29,7 @@ locally observed performance and network conditions. They are not guarantees.
 1. In Umbrel, open **App Store → Community App Stores → Add**.
 2. Enter:
 
-       https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store
+       https://github.com/NoillioN-Labs/umbrel-community-app-store
 
 3. Open the **NoillioN Labs** store and install **Kaspa Solo Mining Console**.
 
@@ -56,6 +60,6 @@ reconnection. Each new release candidate requires its own regression pass.
 ## Support
 
 Report reproducible problems through the public
-[issue tracker](https://github.com/NoillioN-Labs/kaspa-stratum-manager-community-store/issues).
+[consolidated store issue tracker](https://github.com/NoillioN-Labs/umbrel-community-app-store/issues).
 Remove private addresses, wallet information, credentials, miner identifiers
 and other sensitive data before sharing diagnostics.

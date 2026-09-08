@@ -7,14 +7,14 @@ on:
       - main
     paths:
       - .github/workflows/fast-push.yml
-      - kaspa-stratum-manager/app/**
-      - kaspa-stratum-manager/public/**
-      - kaspa-stratum-manager/server/**
-      - kaspa-stratum-manager/tests/**
-      - kaspa-stratum-manager/scripts/**
-      - kaspa-stratum-manager/icon.svg
-      - kaspa-stratum-manager/docker-compose.yml
-      - kaspa-stratum-manager/umbrel-app.yml
+      - noillion-kaspa-stratum-manager/app/**
+      - noillion-kaspa-stratum-manager/public/**
+      - noillion-kaspa-stratum-manager/server/**
+      - noillion-kaspa-stratum-manager/tests/**
+      - noillion-kaspa-stratum-manager/scripts/**
+      - noillion-kaspa-stratum-manager/icon.svg
+      - noillion-kaspa-stratum-manager/docker-compose.yml
+      - noillion-kaspa-stratum-manager/umbrel-app.yml
 
 concurrency:
   group: fast-push
@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Block sensitive public content
-        working-directory: kaspa-stratum-manager
+        working-directory: noillion-kaspa-stratum-manager
         run: node scripts/check-public-safety.mjs
 
       - name: Set up Docker Buildx
@@ -53,8 +53,8 @@ jobs:
         id: build
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
-          context: ./kaspa-stratum-manager
-          file: ./kaspa-stratum-manager/Dockerfile.fast
+          context: ./noillion-kaspa-stratum-manager
+          file: ./noillion-kaspa-stratum-manager/Dockerfile.fast
           platforms: linux/amd64
           push: true
           tags: ${{ env.IMAGE }}:fast
@@ -67,7 +67,7 @@ jobs:
           sbom: false
 
       - name: Pin the test image into the Umbrel package
-        working-directory: kaspa-stratum-manager
+        working-directory: noillion-kaspa-stratum-manager
         env:
           FAST_DIGEST: ${{ steps.build.outputs.digest }}
           SOURCE_SHA: ${{ github.sha }}
@@ -80,8 +80,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          VERSION=$(sed -n 's/^version: "\(.*\)"/\1/p' kaspa-stratum-manager/umbrel-app.yml)
-          git add kaspa-stratum-manager/docker-compose.yml kaspa-stratum-manager/umbrel-app.yml
+          VERSION=$(sed -n 's/^version: "\(.*\)"/\1/p' noillion-kaspa-stratum-manager/umbrel-app.yml)
+          git add noillion-kaspa-stratum-manager/docker-compose.yml noillion-kaspa-stratum-manager/umbrel-app.yml
           git commit -m "Fast Push test package ${VERSION}"
           git push
 

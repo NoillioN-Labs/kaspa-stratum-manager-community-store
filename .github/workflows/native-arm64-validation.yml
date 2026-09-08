@@ -27,14 +27,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: kaspa-stratum-manager/package-lock.json
+          cache-dependency-path: noillion-kaspa-stratum-manager/package-lock.json
 
       - name: Install dependencies
-        working-directory: kaspa-stratum-manager
+        working-directory: noillion-kaspa-stratum-manager
         run: npm ci --no-audit --no-fund
 
       - name: Validate public application source
-        working-directory: kaspa-stratum-manager
+        working-directory: noillion-kaspa-stratum-manager
         env:
           KSM_PACKAGE_CHANNEL: fast
         run: |
@@ -48,8 +48,8 @@ jobs:
       - name: Build the complete image natively
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
-          context: ./kaspa-stratum-manager
-          file: ./kaspa-stratum-manager/Dockerfile
+          context: ./noillion-kaspa-stratum-manager
+          file: ./noillion-kaspa-stratum-manager/Dockerfile
           platforms: linux/arm64
           load: true
           tags: ${{ env.TEST_IMAGE }}
