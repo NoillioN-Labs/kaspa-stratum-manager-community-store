@@ -299,4 +299,3 @@ test("backup recovery validates before replacement and preserves originals", asy
   assert.equal(await readFile(configPath, "utf8"), configBeforeFailure);
   await assert.rejects(readFile(metricsPath, "utf8"), { code: "ENOENT" });
 });
-
