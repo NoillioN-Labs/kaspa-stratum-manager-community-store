@@ -14,7 +14,7 @@
     "spike:reward-rpc": "node server/../scripts/spike-kaspa-reward-rpc.mjs",
     "test:manager": "node --test server/manager.test.mjs",
     "test:packaging": "node scripts/validate-packaging.mjs",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs server/manager.test.mjs server/history.test.mjs server/metrics.test.mjs server/kaspa-rpc.test.mjs server/rewards.test.mjs && npm run test:packaging",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs server/manager.test.mjs server/history.test.mjs server/metrics.test.mjs server/kaspa-rpc.test.mjs server/rewards.test.mjs server/regression.test.mjs && npm run test:packaging",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
   },
@@ -37,6 +37,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "playwright": "1.63.0",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
@@ -47,3 +48,4 @@
   "type": "module",
   "displayName": "Kaspa Solo Mining Console"
 }
+
