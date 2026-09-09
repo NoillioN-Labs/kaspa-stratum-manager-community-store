@@ -86,4 +86,3 @@ if (
     await restoreBackup(process.argv[3], path.resolve(process.argv[4])),
   );
 }
-
