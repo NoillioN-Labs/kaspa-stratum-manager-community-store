@@ -3,28 +3,55 @@ import { atomicWrite } from "./settings.mjs";
 
 export const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-const finite = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
-const optionalFinite = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
-const iso = (timestamp) => timestamp ? new Date(timestamp).toISOString() : null;
-const emptyData = () => ({ version: 1, acceptedSharesTotal: 0, lastBridgeShares: null, samples: [] });
+const finite = (value) =>
+  Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+const optionalFinite = (value) =>
+  value !== null &&
+  value !== undefined &&
+  value !== "" &&
+  typeof value !== "boolean" &&
+  Number.isFinite(Number(value))
+    ? Math.max(0, Number(value))
+    : null;
+const iso = (timestamp) =>
+  timestamp ? new Date(timestamp).toISOString() : null;
+const emptyData = () => ({
+  version: 1,
+  acceptedSharesTotal: 0,
+  lastBridgeShares: null,
+  samples: [],
+});
 
 const validStoredData = (input) => {
-  if (!input || input.version !== 1 || !Array.isArray(input.samples)) return emptyData();
+  if (!input || input.version !== 1 || !Array.isArray(input.samples))
+    throw new Error(
+      "Unsupported or invalid stored history schema; original file preserved",
+    );
   return {
     version: 1,
     acceptedSharesTotal: finite(input.acceptedSharesTotal),
     lastBridgeShares: optionalFinite(input.lastBridgeShares),
-    samples: input.samples.flatMap((sample) => Number.isFinite(sample?.timestamp) ? [{
-      timestamp: sample.timestamp,
-      hashrateHs: finite(sample.hashrateHs),
-      connectedMiners: Math.floor(finite(sample.connectedMiners)),
-      acceptedSharesTotal: finite(sample.acceptedSharesTotal),
-    }] : []),
+    samples: input.samples.flatMap((sample) =>
+      Number.isFinite(sample?.timestamp)
+        ? [
+            {
+              timestamp: sample.timestamp,
+              hashrateHs: finite(sample.hashrateHs),
+              connectedMiners: Math.floor(finite(sample.connectedMiners)),
+              acceptedSharesTotal: finite(sample.acceptedSharesTotal),
+            },
+          ]
+        : [],
+    ),
   };
 };
 
-const combinedHashrate = (stats) => (Array.isArray(stats?.workers) ? stats.workers : [])
-  .reduce((total, worker) => total + finite(worker?.hashrateGhs ?? worker?.hashrate) * 1e9, 0);
+const combinedHashrate = (stats) =>
+  (Array.isArray(stats?.workers) ? stats.workers : []).reduce(
+    (total, worker) =>
+      total + finite(worker?.hashrateGhs ?? worker?.hashrate) * 1e9,
+    0,
+  );
 
 export class DashboardMetricsStore {
   constructor({
@@ -56,9 +83,15 @@ export class DashboardMetricsStore {
 
   async loadUnlocked() {
     if (this.loaded) return;
-    try { this.data = validStoredData(JSON.parse(await readFile(this.path, "utf8"))); }
-    catch (error) {
-      if (error.code !== "ENOENT") this.onError(`Dashboard metrics could not be read and were reset: ${error.message}`);
+    try {
+      this.data = validStoredData(
+        JSON.parse(await readFile(this.path, "utf8")),
+      );
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        this.onError(`Dashboard metrics unavailable: ${error.message}`);
+        throw error;
+      }
       this.data = emptyData();
     }
     this.loaded = true;
@@ -67,12 +100,16 @@ export class DashboardMetricsStore {
 
   pruneUnlocked(now) {
     const cutoff = now - this.retentionMs;
-    this.data.samples = this.data.samples.filter(({ timestamp }) => timestamp >= cutoff && timestamp <= now + this.sampleIntervalMs);
+    this.data.samples = this.data.samples.filter(
+      ({ timestamp }) =>
+        timestamp >= cutoff && timestamp <= now + this.sampleIntervalMs,
+    );
   }
 
   async flushUnlocked(force = false) {
     const now = this.now();
-    if (!this.dirty || (!force && now - this.lastFlush < this.flushIntervalMs)) return;
+    if (!this.dirty || (!force && now - this.lastFlush < this.flushIntervalMs))
+      return;
     await atomicWrite(this.path, `${JSON.stringify(this.data)}\n`);
     this.dirty = false;
     this.lastFlush = now;
@@ -83,21 +120,30 @@ export class DashboardMetricsStore {
       await this.loadUnlocked();
       const bridgeShares = optionalFinite(stats?.totalShares);
       if (bridgeShares !== null) {
-        if (this.data.lastBridgeShares === null) this.data.acceptedSharesTotal = Math.max(this.data.acceptedSharesTotal, bridgeShares);
-        else this.data.acceptedSharesTotal += bridgeShares >= this.data.lastBridgeShares
-          ? bridgeShares - this.data.lastBridgeShares
-          : bridgeShares;
+        if (this.data.lastBridgeShares === null)
+          this.data.acceptedSharesTotal = Math.max(
+            this.data.acceptedSharesTotal,
+            bridgeShares,
+          );
+        else
+          this.data.acceptedSharesTotal +=
+            bridgeShares >= this.data.lastBridgeShares
+              ? bridgeShares - this.data.lastBridgeShares
+              : bridgeShares;
         this.data.lastBridgeShares = bridgeShares;
       }
       const workers = Array.isArray(stats?.workers) ? stats.workers : [];
       const sample = {
         timestamp,
         hashrateHs: combinedHashrate(stats),
-        connectedMiners: Math.floor(optionalFinite(stats?.activeWorkers) ?? workers.length),
+        connectedMiners: Math.floor(
+          optionalFinite(stats?.activeWorkers) ?? workers.length,
+        ),
         acceptedSharesTotal: this.data.acceptedSharesTotal,
       };
       const latest = this.data.samples.at(-1);
-      if (latest && timestamp - latest.timestamp < this.sampleIntervalMs / 2) this.data.samples[this.data.samples.length - 1] = sample;
+      if (latest && timestamp - latest.timestamp < this.sampleIntervalMs / 2)
+        this.data.samples[this.data.samples.length - 1] = sample;
       else this.data.samples.push(sample);
       this.pruneUnlocked(timestamp);
       this.dirty = true;
@@ -130,7 +176,18 @@ export class DashboardMetricsStore {
     });
   }
 
+  exportData() {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      return structuredClone(this.data);
+    });
+  }
+
   close() {
-    return this.queue(async () => { await this.loadUnlocked(); await this.flushUnlocked(true); });
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      await this.flushUnlocked(true);
+    });
   }
 }
+
