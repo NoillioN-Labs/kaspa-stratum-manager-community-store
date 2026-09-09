@@ -212,4 +212,3 @@ export class KaspaRpcAdapter extends EventEmitter {
     this.client = null;
   }
 }
-
