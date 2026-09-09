@@ -818,4 +818,3 @@ test("cross-origin mutations rejected and concurrent readers share bridge collec
   );
   assert.equal(calls, 1);
 });
-
