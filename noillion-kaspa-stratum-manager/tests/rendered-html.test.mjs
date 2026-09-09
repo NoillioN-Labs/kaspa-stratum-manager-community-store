@@ -154,4 +154,3 @@ test("dashboard styles provide a readable iPhone layout", async () => {
   assert.match(styles, /\.log-search input\{min-height:44px;font-size:16px/);
   assert.match(styles, /@media \(max-width:380px\)/);
 });
-
