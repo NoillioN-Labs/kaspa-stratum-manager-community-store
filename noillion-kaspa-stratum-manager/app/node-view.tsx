@@ -248,4 +248,3 @@ export default function NodeView({ base }: { base: string }) {
     </section>
   );
 }
-
