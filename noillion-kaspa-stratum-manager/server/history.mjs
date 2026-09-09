@@ -1032,4 +1032,3 @@ export class MiningHistoryStore {
     });
   }
 }
-
