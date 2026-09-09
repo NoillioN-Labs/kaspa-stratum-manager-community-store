@@ -261,4 +261,3 @@ export const sanitizedSettingsModel = (settings) => ({
     credentialsStored: false,
   },
 });
-
