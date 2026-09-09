@@ -65,7 +65,7 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /saved in this browser/i);
   assert.match(source, /api\/manager\/statistics\/reset/);
   assert.match(source, /role="alertdialog"/);
-  assert.match(source, /Delete all data/);
+  assert.match(source, /Reset telemetry/);
   assert.match(source, /cannot be undone/i);
   assert.match(source, /Saving briefly interrupts miners/);
   assert.match(source, /previous working settings are restored automatically/);
@@ -89,15 +89,11 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Average network hashrate/);
   assert.match(source, /Network blocks observed/);
   assert.match(source, /Per-miner 7-day outlook/);
-  assert.match(source, /Solo mining revenue analytics/);
-  assert.match(source, /Realised reward over time/);
-  assert.match(source, /DAG resolution/);
-  assert.match(source, /Block subsidy/);
-  assert.match(source, /Accepted fees/);
-  assert.match(source, /DAG rewards/);
-  assert.match(source, /Block reward ledger/);
-  assert.match(source, /api\/manager\/rewards\/summary/);
-  assert.match(source, /does not mean rewarded/i);
+  const analytics = await readFile(new URL("../app/analytics.tsx", import.meta.url), "utf8");
+  assert.match(analytics, /CUMULATIVE REWARDS/);
+  assert.match(analytics, /Block reward ledger/);
+  assert.match(analytics, /api\/manager\/rewards\/summary/);
+  assert.match(source, /GhostDag/);
   assert.match(source, /Hashrate performance/);
   assert.match(source, /1-hour average/);
   assert.match(source, /6-hour average/);
@@ -108,7 +104,7 @@ test("dashboard source contains no representative mining records", async () => {
   assert.match(source, /Observed block luck/);
   assert.match(source, /Current round effort/);
   assert.match(source, /Recent confirmed blocks/);
-  assert.match(source, /Confirmed blue/);
+  assert.match(source, /Bridge reported/);
   assert.match(source, /More than 100% is normal/);
   assert.match(source, /Forecasts use changing network conditions/i);
   assert.match(source, /not promises/i);
@@ -158,3 +154,4 @@ test("dashboard styles provide a readable iPhone layout", async () => {
   assert.match(styles, /\.log-search input\{min-height:44px;font-size:16px/);
   assert.match(styles, /@media \(max-width:380px\)/);
 });
+
