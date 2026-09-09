@@ -18,7 +18,7 @@ support: https://github.com/NoillioN-Labs/umbrel-community-app-store/issues
 port: 5556
 gallery: []
 releaseNotes: >-
-  Minor bug fixes and improvements.
+  New Mining Suite-inspired dashboard with visual Analytics, a complete reward ledger, live GhostDAG and Rusty Kaspad status, improved worker and log controls, safer settings and backup recovery, and reliability fixes.
 path: ""
 defaultUsername: ""
 defaultPassword: ""
