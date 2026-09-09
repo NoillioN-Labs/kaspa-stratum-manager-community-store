@@ -10,10 +10,25 @@ async function proxy(request: Request, context: RouteContext) {
   }
 
   const incoming = new URL(request.url);
+  const mutation = !["GET", "HEAD", "OPTIONS"].includes(request.method);
+  if (mutation) {
+    const origin = request.headers.get("origin");
+    const host = request.headers.get("host") || incoming.host;
+    let originMatches = !origin;
+    try { if(origin){const parsed=new URL(origin);originMatches=["http:","https:"].includes(parsed.protocol)&&parsed.host===host;} } catch { originMatches=false; }
+    if (request.headers.get("sec-fetch-site") === "cross-site" || !originMatches) {
+      return Response.json({ error:"Cross-origin changes are not allowed" }, {status:403});
+    }
+    if (!request.headers.get("content-type")?.startsWith("application/json") && request.body) return Response.json({error:"JSON required"},{status:415});
+  }
   const target = new URL(`/api/manager/${path.join("/")}${incoming.search}`, managerOrigin());
-  const body = request.method === "GET" || request.method === "HEAD"
-    ? undefined
-    : await request.arrayBuffer();
+  let body:Uint8Array<ArrayBuffer>|undefined;
+  if (mutation && request.body) {
+    const reader = request.body.getReader(), chunks:Uint8Array[]=[];
+    let size=0;
+    while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>16384){await reader.cancel();return Response.json({error:"Request too large"},{status:413});}chunks.push(value);}
+    body=new Uint8Array(size);let offset=0;for(const chunk of chunks){body.set(chunk,offset);offset+=chunk.length;}
+  }
 
   try {
     const response = await fetch(target, {
@@ -23,7 +38,7 @@ async function proxy(request: Request, context: RouteContext) {
         : undefined,
       body,
       cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(mutation ? 90_000 : 10_000),
     });
     const headers = new Headers({ "cache-control": "no-store" });
     const contentType = response.headers.get("content-type");
@@ -39,3 +54,4 @@ export const GET = proxy;
 export const POST = proxy;
 export const PUT = proxy;
 export const OPTIONS = proxy;
+
