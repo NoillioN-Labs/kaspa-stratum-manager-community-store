@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./suite.css";
 
 export const metadata: Metadata = {
   title: "Kaspa Solo Mining Console",
@@ -25,3 +26,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
