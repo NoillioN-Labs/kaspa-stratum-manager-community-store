@@ -65,4 +65,3 @@ export function useLive<T>(url: string, interval = 5000, enabled = true) {
     refresh,
   };
 }
-
