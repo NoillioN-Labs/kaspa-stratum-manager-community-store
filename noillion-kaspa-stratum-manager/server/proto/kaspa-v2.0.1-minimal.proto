@@ -125,4 +125,3 @@ message KaspadResponse {
 service RPC {
   rpc MessageStream (stream KaspadRequest) returns (stream KaspadResponse) {}
 }
-
