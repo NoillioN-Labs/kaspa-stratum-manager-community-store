@@ -82,10 +82,26 @@ message GetBlockRewardInfoResponseMessage {
   RPCError error = 1000;
 }
 
+enum RpcNotifyCommand { NOTIFY_START = 0; NOTIFY_STOP = 1; }
+message NotifyBlockAddedRequestMessage { RpcNotifyCommand command = 101; }
+message NotifyBlockAddedResponseMessage { RPCError error = 1000; }
+message BlockAddedNotificationMessage { RpcBlock block = 3; }
+message NotifyVirtualChainChangedRequestMessage { bool includeAcceptedTransactionIds = 1; RpcNotifyCommand command = 101; }
+message NotifyVirtualChainChangedResponseMessage { RPCError error = 1000; }
+message VirtualChainChangedNotificationMessage { repeated string removedChainBlockHashes = 1; repeated string addedChainBlockHashes = 3; }
+message GetBlockDagInfoRequestMessage {}
+message GetBlockDagInfoResponseMessage { string networkName = 1; uint64 blockCount = 2; uint64 headerCount = 3; repeated string tipHashes = 4; double difficulty = 5; int64 pastMedianTime = 6; repeated string virtualParentHashes = 7; string pruningPointHash = 8; uint64 virtualDaaScore = 9; string sink = 10; RPCError error = 1000; }
+message GetConnectedPeerInfoRequestMessage {}
+message GetConnectedPeerInfoMessage { string id = 1; }
+message GetConnectedPeerInfoResponseMessage { repeated GetConnectedPeerInfoMessage infos = 1; RPCError error = 1000; }
 message KaspadRequest {
   uint64 id = 101;
   oneof payload {
     GetBlockRequestMessage getBlockRequest = 1025;
+    NotifyBlockAddedRequestMessage notifyBlockAddedRequest = 1007;
+    NotifyVirtualChainChangedRequestMessage notifyVirtualChainChangedRequest = 1022;
+    GetBlockDagInfoRequestMessage getBlockDagInfoRequest = 1035;
+    GetConnectedPeerInfoRequestMessage getConnectedPeerInfoRequest = 1016;
     GetServerInfoRequestMessage getServerInfoRequest = 1092;
     GetBlockRewardInfoRequestMessage getBlockRewardInfoRequest = 1116;
   }
@@ -95,6 +111,12 @@ message KaspadResponse {
   uint64 id = 101;
   oneof payload {
     GetBlockResponseMessage getBlockResponse = 1026;
+    NotifyBlockAddedResponseMessage notifyBlockAddedResponse = 1008;
+    BlockAddedNotificationMessage blockAddedNotification = 1009;
+    NotifyVirtualChainChangedResponseMessage notifyVirtualChainChangedResponse = 1023;
+    VirtualChainChangedNotificationMessage virtualChainChangedNotification = 1024;
+    GetBlockDagInfoResponseMessage getBlockDagInfoResponse = 1036;
+    GetConnectedPeerInfoResponseMessage getConnectedPeerInfoResponse = 1017;
     GetServerInfoResponseMessage getServerInfoResponse = 1093;
     GetBlockRewardInfoResponseMessage getBlockRewardInfoResponse = 1117;
   }

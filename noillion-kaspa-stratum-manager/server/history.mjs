@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { atomicWrite } from "./settings.mjs";
 
 export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-export const BLOCK_HISTORY_MS = 365 * 24 * 60 * 60 * 1000;
+export const BLOCK_HISTORY_MS = Number.MAX_SAFE_INTEGER; // Discoveries outlive telemetry retention.
 
 const PERIODS = {
   oneHour: 60 * 60 * 1000,
@@ -16,13 +16,29 @@ const CHART_BUCKETS = {
   twentyFourHours: 15 * 60_000,
   sevenDays: 60 * 60_000,
 };
-const finite = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
-const optionalFinite = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
-const text = (value) => typeof value === "string" ? value.trim() : "";
-const rewardStatuses = new Set(["unresolved", "unknown", "blue", "red", "error"]);
+const finite = (value) =>
+  Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+const optionalFinite = (value) =>
+  value !== null &&
+  value !== undefined &&
+  value !== "" &&
+  typeof value !== "boolean" &&
+  Number.isFinite(Number(value))
+    ? Math.max(0, Number(value))
+    : null;
+const text = (value) => (typeof value === "string" ? value.trim() : "");
+const rewardStatuses = new Set([
+  "unresolved",
+  "unknown",
+  "blue",
+  "red",
+  "error",
+]);
 const blockColors = new Set(["unknown", "blue", "red"]);
-const sompi = (value) => typeof value === "string" && /^(0|[1-9]\d*)$/.test(value) ? value : null;
-const nullableCount = (value) => sompi(typeof value === "number" ? String(value) : value);
+const sompi = (value) =>
+  typeof value === "string" && /^(0|[1-9]\d*)$/.test(value) ? value : null;
+const nullableCount = (value) =>
+  sompi(typeof value === "number" ? String(value) : value);
 const rewardDefaults = () => ({
   rewardStatus: "unresolved",
   blockColor: "unknown",
@@ -35,25 +51,52 @@ const rewardDefaults = () => ({
   rewardDecompositionVerified: false,
   rewardResolvedAt: null,
   rewardLastCheckedAt: null,
+  rewardNextCheckAt: 0,
+  rewardAttempts: 0,
   rewardError: null,
 });
 const sanitizedReward = (source = {}) => ({
-  rewardStatus: rewardStatuses.has(source.rewardStatus) ? source.rewardStatus : "unresolved",
-  blockColor: blockColors.has(source.blockColor) ? source.blockColor : "unknown",
+  rewardStatus: rewardStatuses.has(source.rewardStatus)
+    ? source.rewardStatus
+    : "unresolved",
+  blockColor: blockColors.has(source.blockColor)
+    ? source.blockColor
+    : "unknown",
   confirmationCount: nullableCount(source.confirmationCount),
-  mergingChainBlockHash: text(source.mergingChainBlockHash).toLowerCase() || null,
+  mergingChainBlockHash:
+    text(source.mergingChainBlockHash).toLowerCase() || null,
   subsidySompi: sompi(source.subsidySompi),
   acceptedTxFeesSompi: sompi(source.acceptedTxFeesSompi),
   dagMergeRewardSompi: sompi(source.dagMergeRewardSompi),
   totalRewardSompi: sompi(source.totalRewardSompi),
-  rewardDecompositionVerified: source.rewardDecompositionVerified === true,
-  rewardResolvedAt: Number.isFinite(Number(source.rewardResolvedAt)) ? Number(source.rewardResolvedAt) : null,
-  rewardLastCheckedAt: Number.isFinite(Number(source.rewardLastCheckedAt)) ? Number(source.rewardLastCheckedAt) : null,
+  rewardDecompositionVerified:
+    source.rewardDecompositionVerified === true &&
+    source.rewardProofVersion === 1,
+  rewardProofVersion: source.rewardProofVersion === 1 ? 1 : 0,
+  lastSuccessfulReward: ["blue", "red"].includes(
+    source.lastSuccessfulReward?.rewardStatus,
+  )
+    ? {
+        rewardStatus: source.lastSuccessfulReward.rewardStatus,
+        totalRewardSompi: sompi(source.lastSuccessfulReward.totalRewardSompi),
+        checkedAt: optionalFinite(source.lastSuccessfulReward.checkedAt),
+      }
+    : null,
+  rewardResolvedAt: Number.isFinite(Number(source.rewardResolvedAt))
+    ? Number(source.rewardResolvedAt)
+    : null,
+  rewardLastCheckedAt: Number.isFinite(Number(source.rewardLastCheckedAt))
+    ? Number(source.rewardLastCheckedAt)
+    : null,
+  rewardNextCheckAt: optionalFinite(source.rewardNextCheckAt) ?? 0,
+  rewardAttempts: optionalFinite(source.rewardAttempts) ?? 0,
   rewardError: text(source.rewardError).slice(0, 500) || null,
 });
-const workerName = (worker) => text(worker?.worker || worker?.workerName || worker?.name);
+const workerName = (worker) =>
+  text(worker?.worker || worker?.workerName || worker?.name);
 const workerKey = (instance, worker) => `${instance}\u0000${worker}`;
-const iso = (timestamp) => timestamp ? new Date(timestamp).toISOString() : null;
+const iso = (timestamp) =>
+  timestamp ? new Date(timestamp).toISOString() : null;
 const eventTime = (value, fallback) => {
   const numeric = Number(value);
   const parsed = Number.isFinite(numeric) ? numeric * 1000 : Date.parse(value);
@@ -66,7 +109,8 @@ const counter = (source, names) => {
   }
   return null;
 };
-const counterDelta = (left, right) => left === null || right === null ? null : right >= left ? right - left : right;
+const counterDelta = (left, right) =>
+  left === null || right === null ? null : right >= left ? right - left : right;
 const emptyData = () => ({ version: 3, samples: [], blocks: [] });
 
 const sanitizedWorker = (source, stored = false) => {
@@ -75,10 +119,18 @@ const sanitizedWorker = (source, stored = false) => {
   return {
     instance: text(source.instance),
     worker,
-    hashrateHs: finite(stored ? source.hashrateHs : finite(source.hashrateGhs ?? source.hashrate) * 1e9),
+    hashrateHs: finite(
+      stored
+        ? source.hashrateHs
+        : finite(source.hashrateGhs ?? source.hashrate) * 1e9,
+    ),
     acceptedShares: counter(source, ["acceptedShares", "shares"]),
     staleShares: counter(source, ["staleShares", "stales"]),
-    invalidShares: counter(source, ["invalidShares", "rejectedShares", "invalid"]),
+    invalidShares: counter(source, [
+      "invalidShares",
+      "rejectedShares",
+      "invalid",
+    ]),
   };
 };
 
@@ -87,42 +139,66 @@ const sanitizedSample = (stats, timestamp) => ({
   networkHashrate: finite(stats?.networkHashrate),
   networkDifficulty: finite(stats?.networkDifficulty),
   networkBlockCount: finite(stats?.networkBlockCount),
-  workers: (Array.isArray(stats?.workers) ? stats.workers : []).map((source) => sanitizedWorker(source)).filter(Boolean),
+  workers: (Array.isArray(stats?.workers) ? stats.workers : [])
+    .map((source) => sanitizedWorker(source))
+    .filter(Boolean),
 });
 
 const validStoredData = (input) => {
-  if (!input || ![1, 2, 3].includes(input.version) || !Array.isArray(input.samples) || !Array.isArray(input.blocks)) return emptyData();
+  if (
+    !input ||
+    ![1, 2, 3].includes(input.version) ||
+    !Array.isArray(input.samples) ||
+    !Array.isArray(input.blocks)
+  )
+    throw new Error(
+      "Unsupported or invalid stored history schema; original file preserved",
+    );
   return {
     version: 3,
-    samples: input.samples.filter((sample) => Number.isFinite(sample?.timestamp) && Array.isArray(sample?.workers)).map((sample) => ({
-      timestamp: sample.timestamp,
-      networkHashrate: finite(sample.networkHashrate),
-      networkDifficulty: finite(sample.networkDifficulty),
-      networkBlockCount: finite(sample.networkBlockCount),
-      workers: sample.workers.map((source) => sanitizedWorker(source, true)).filter(Boolean),
-    })),
+    samples: input.samples
+      .filter(
+        (sample) =>
+          Number.isFinite(sample?.timestamp) && Array.isArray(sample?.workers),
+      )
+      .map((sample) => ({
+        timestamp: sample.timestamp,
+        networkHashrate: finite(sample.networkHashrate),
+        networkDifficulty: finite(sample.networkDifficulty),
+        networkBlockCount: finite(sample.networkBlockCount),
+        workers: sample.workers
+          .map((source) => sanitizedWorker(source, true))
+          .filter(Boolean),
+      })),
     blocks: input.blocks.flatMap((source) => {
-      const hash = text(source?.hash);
+      const hash = text(source?.hash).toLowerCase();
       const worker = workerName(source);
       if (!hash || !worker || !Number.isFinite(source?.timestamp)) return [];
-      return [{
-        hash,
-        instance: text(source.instance),
-        worker,
-        timestamp: source.timestamp,
-        networkDifficulty: finite(source.networkDifficulty),
-        networkBlockCount: finite(source.networkBlockCount),
-        ...sanitizedReward(source),
-      }];
+      return [
+        {
+          hash,
+          instance: text(source.instance),
+          worker,
+          timestamp: source.timestamp,
+          networkDifficulty: finite(source.networkDifficulty),
+          networkBlockCount: finite(source.networkBlockCount),
+          ...sanitizedReward(source),
+        },
+      ];
     }),
   };
 };
 
 const outlook = (expected, coverageSeconds, windowSeconds) => {
   if (!(coverageSeconds > 0) || !(expected > 0)) {
-    return { expectedBlocksNextWindow: null, probabilityNextWindow: null, probabilityNoBlockNextWindow: null, estimatedTimeToBlockSeconds: null };
+    return {
+      expectedBlocksNextWindow: null,
+      probabilityNextWindow: null,
+      probabilityNoBlockNextWindow: null,
+      estimatedTimeToBlockSeconds: null,
+    };
   }
-  const expectedBlocksNextWindow = expected / coverageSeconds * windowSeconds;
+  const expectedBlocksNextWindow = (expected / coverageSeconds) * windowSeconds;
   return {
     expectedBlocksNextWindow,
     probabilityNextWindow: 1 - Math.exp(-expectedBlocksNextWindow),
@@ -132,18 +208,31 @@ const outlook = (expected, coverageSeconds, windowSeconds) => {
 };
 
 const intervalExpected = (previous, current, worker = null) => {
-  const networkHashrate = (previous.networkHashrate + current.networkHashrate) / 2;
+  const networkHashrate =
+    (previous.networkHashrate + current.networkHashrate) / 2;
   const networkBlocks = current.networkBlockCount - previous.networkBlockCount;
   if (!(networkHashrate > 0) || !(networkBlocks >= 0)) return 0;
   if (!worker) {
-    const left = previous.workers.reduce((sum, item) => sum + item.hashrateHs, 0);
-    const right = current.workers.reduce((sum, item) => sum + item.hashrateHs, 0);
-    return ((left + right) / 2) / networkHashrate * networkBlocks;
+    const left = previous.workers.reduce(
+      (sum, item) => sum + item.hashrateHs,
+      0,
+    );
+    const right = current.workers.reduce(
+      (sum, item) => sum + item.hashrateHs,
+      0,
+    );
+    return ((left + right) / 2 / networkHashrate) * networkBlocks;
   }
   const key = workerKey(worker.instance, worker.worker);
-  const left = previous.workers.find((item) => workerKey(item.instance, item.worker) === key)?.hashrateHs ?? 0;
-  const right = current.workers.find((item) => workerKey(item.instance, item.worker) === key)?.hashrateHs ?? 0;
-  return ((left + right) / 2) / networkHashrate * networkBlocks;
+  const left =
+    previous.workers.find(
+      (item) => workerKey(item.instance, item.worker) === key,
+    )?.hashrateHs ?? 0;
+  const right =
+    current.workers.find(
+      (item) => workerKey(item.instance, item.worker) === key,
+    )?.hashrateHs ?? 0;
+  return ((left + right) / 2 / networkHashrate) * networkBlocks;
 };
 
 const expectedBetween = (samples, start, end, sampleIntervalMs) => {
@@ -153,46 +242,105 @@ const expectedBetween = (samples, start, end, sampleIntervalMs) => {
     const current = samples[index];
     const interval = current.timestamp - previous.timestamp;
     if (!(interval > 0) || interval > sampleIntervalMs * 3) continue;
-    const overlap = Math.max(0, Math.min(current.timestamp, end) - Math.max(previous.timestamp, start));
-    if (overlap > 0) expected += intervalExpected(previous, current) * overlap / interval;
+    const overlap = Math.max(
+      0,
+      Math.min(current.timestamp, end) - Math.max(previous.timestamp, start),
+    );
+    if (overlap > 0)
+      expected += (intervalExpected(previous, current) * overlap) / interval;
   }
   return expected;
 };
 
 const shareSummary = (source, coverageSeconds) => {
-  const rejected = (source.staleReported ? source.staleShares : 0) + (source.invalidReported ? source.invalidShares : 0);
+  const rejected =
+    (source.staleReported ? source.staleShares : 0) +
+    (source.invalidReported ? source.invalidShares : 0);
   const qualityReported = source.staleReported || source.invalidReported;
   return {
     acceptedShares: source.acceptedShares,
     staleShares: source.staleReported ? source.staleShares : null,
     invalidShares: source.invalidReported ? source.invalidShares : null,
-    rejectionRate: qualityReported && source.acceptedShares + rejected > 0 ? rejected / (source.acceptedShares + rejected) : null,
-    sharesPerMinute: coverageSeconds > 0 ? source.acceptedShares / (coverageSeconds / 60) : null,
+    rejectionRate:
+      qualityReported && source.acceptedShares + rejected > 0
+        ? rejected / (source.acceptedShares + rejected)
+        : null,
+    sharesPerMinute:
+      coverageSeconds > 0
+        ? source.acceptedShares / (coverageSeconds / 60)
+        : null,
   };
 };
 
-const periodSummary = (allSamples, blocks, cutoff, windowMs, sampleIntervalMs) => {
-  const samples = allSamples.filter(({ timestamp }) => timestamp >= cutoff).sort((a, b) => a.timestamp - b.timestamp);
+const periodSummary = (
+  allSamples,
+  blocks,
+  cutoff,
+  windowMs,
+  sampleIntervalMs,
+) => {
+  const samples = allSamples
+    .filter(({ timestamp }) => timestamp >= cutoff)
+    .sort((a, b) => a.timestamp - b.timestamp);
   const workers = new Map();
-  const aggregate = { hashSeconds: 0, onlineSeconds: 0, networkHashSeconds: 0, networkDifficultySeconds: 0, networkCoverageSeconds: 0, networkBlocks: 0, expected: 0, acceptedShares: 0, staleShares: 0, invalidShares: 0, staleReported: false, invalidReported: false, lastAcceptedShareAt: null };
+  const aggregate = {
+    hashSeconds: 0,
+    onlineSeconds: 0,
+    networkHashSeconds: 0,
+    networkDifficultySeconds: 0,
+    networkCoverageSeconds: 0,
+    networkBlocks: 0,
+    expected: 0,
+    acceptedShares: 0,
+    staleShares: 0,
+    invalidShares: 0,
+    staleReported: false,
+    invalidReported: false,
+    lastAcceptedShareAt: null,
+  };
   let coverageSeconds = 0;
   const ensure = (instance, worker) => {
     const key = workerKey(instance, worker);
-    if (!workers.has(key)) workers.set(key, { instance, worker, hashSeconds: 0, onlineSeconds: 0, expected: 0, acceptedShares: 0, staleShares: 0, invalidShares: 0, staleReported: false, invalidReported: false, lastSeenAt: null, lastAcceptedShareAt: null });
+    if (!workers.has(key))
+      workers.set(key, {
+        instance,
+        worker,
+        hashSeconds: 0,
+        onlineSeconds: 0,
+        expected: 0,
+        acceptedShares: 0,
+        staleShares: 0,
+        invalidShares: 0,
+        staleReported: false,
+        invalidReported: false,
+        lastSeenAt: null,
+        lastAcceptedShareAt: null,
+      });
     return workers.get(key);
   };
-  for (const sample of samples) for (const worker of sample.workers) {
-    const target = ensure(worker.instance, worker.worker);
-    target.lastSeenAt = Math.max(target.lastSeenAt ?? 0, sample.timestamp);
-  }
+  for (const sample of samples)
+    for (const worker of sample.workers) {
+      const target = ensure(worker.instance, worker.worker);
+      target.lastSeenAt = Math.max(target.lastSeenAt ?? 0, sample.timestamp);
+    }
   for (let index = 1; index < samples.length; index += 1) {
     const previous = samples[index - 1];
     const current = samples[index];
     const seconds = (current.timestamp - previous.timestamp) / 1000;
-    if (!(seconds > 0) || seconds > sampleIntervalMs / 1000 * 3) continue;
+    if (!(seconds > 0) || seconds > (sampleIntervalMs / 1000) * 3) continue;
     coverageSeconds += seconds;
-    const previousWorkers = new Map(previous.workers.map((worker) => [workerKey(worker.instance, worker.worker), worker]));
-    const currentWorkers = new Map(current.workers.map((worker) => [workerKey(worker.instance, worker.worker), worker]));
+    const previousWorkers = new Map(
+      previous.workers.map((worker) => [
+        workerKey(worker.instance, worker.worker),
+        worker,
+      ]),
+    );
+    const currentWorkers = new Map(
+      current.workers.map((worker) => [
+        workerKey(worker.instance, worker.worker),
+        worker,
+      ]),
+    );
     const keys = new Set([...previousWorkers.keys(), ...currentWorkers.keys()]);
     let intervalHashrate = 0;
     for (const key of keys) {
@@ -203,27 +351,56 @@ const periodSummary = (allSamples, blocks, cutoff, windowMs, sampleIntervalMs) =
       const hashrate = ((left?.hashrateHs ?? 0) + (right?.hashrateHs ?? 0)) / 2;
       const target = ensure(instance, name);
       target.hashSeconds += hashrate * seconds;
-      target.expected += intervalExpected(previous, current, target);
+      const netRate = (previous.networkHashrate + current.networkHashrate) / 2;
+      const netBlocks = current.networkBlockCount - previous.networkBlockCount;
+      target.expected +=
+        netRate > 0 && netBlocks >= 0 ? (hashrate / netRate) * netBlocks : 0;
       intervalHashrate += hashrate;
       if (left || right) target.onlineSeconds += seconds;
-      const accepted = counterDelta(left?.acceptedShares ?? null, right?.acceptedShares ?? null);
-      const stale = counterDelta(left?.staleShares ?? null, right?.staleShares ?? null);
-      const invalid = counterDelta(left?.invalidShares ?? null, right?.invalidShares ?? null);
+      const accepted = counterDelta(
+        left?.acceptedShares ?? null,
+        right?.acceptedShares ?? null,
+      );
+      const stale = counterDelta(
+        left?.staleShares ?? null,
+        right?.staleShares ?? null,
+      );
+      const invalid = counterDelta(
+        left?.invalidShares ?? null,
+        right?.invalidShares ?? null,
+      );
       if (accepted !== null) {
         target.acceptedShares += accepted;
         aggregate.acceptedShares += accepted;
-        if (accepted > 0) { target.lastAcceptedShareAt = current.timestamp; aggregate.lastAcceptedShareAt = current.timestamp; }
+        if (accepted > 0) {
+          target.lastAcceptedShareAt = current.timestamp;
+          aggregate.lastAcceptedShareAt = current.timestamp;
+        }
       }
-      if (stale !== null) { target.staleShares += stale; target.staleReported = true; aggregate.staleShares += stale; aggregate.staleReported = true; }
-      if (invalid !== null) { target.invalidShares += invalid; target.invalidReported = true; aggregate.invalidShares += invalid; aggregate.invalidReported = true; }
+      if (stale !== null) {
+        target.staleShares += stale;
+        target.staleReported = true;
+        aggregate.staleShares += stale;
+        aggregate.staleReported = true;
+      }
+      if (invalid !== null) {
+        target.invalidShares += invalid;
+        target.invalidReported = true;
+        aggregate.invalidShares += invalid;
+        aggregate.invalidReported = true;
+      }
     }
     aggregate.hashSeconds += intervalHashrate * seconds;
     if (intervalHashrate > 0) aggregate.onlineSeconds += seconds;
-    const networkHashrate = (previous.networkHashrate + current.networkHashrate) / 2;
-    const networkBlocks = current.networkBlockCount - previous.networkBlockCount;
+    const networkHashrate =
+      (previous.networkHashrate + current.networkHashrate) / 2;
+    const networkBlocks =
+      current.networkBlockCount - previous.networkBlockCount;
     if (networkHashrate > 0 && networkBlocks >= 0) {
       aggregate.networkHashSeconds += networkHashrate * seconds;
-      aggregate.networkDifficultySeconds += (previous.networkDifficulty + current.networkDifficulty) / 2 * seconds;
+      aggregate.networkDifficultySeconds +=
+        ((previous.networkDifficulty + current.networkDifficulty) / 2) *
+        seconds;
       aggregate.networkCoverageSeconds += seconds;
       aggregate.networkBlocks += networkBlocks;
       aggregate.expected += intervalExpected(previous, current);
@@ -234,21 +411,34 @@ const periodSummary = (allSamples, blocks, cutoff, windowMs, sampleIntervalMs) =
     windowSeconds: windowMs / 1000,
     sampleCount: samples.length,
     coverageSeconds,
-    averageHashrateHs: coverageSeconds ? aggregate.hashSeconds / coverageSeconds : 0,
-    availabilityRatio: coverageSeconds ? aggregate.onlineSeconds / coverageSeconds : null,
+    averageHashrateHs: coverageSeconds
+      ? aggregate.hashSeconds / coverageSeconds
+      : 0,
+    availabilityRatio: coverageSeconds
+      ? aggregate.onlineSeconds / coverageSeconds
+      : null,
     expectedBlocksObserved: aggregate.expected,
     actualBlocksObserved: periodBlocks.length,
-    luckRatio: aggregate.expected > 0 ? periodBlocks.length / aggregate.expected : null,
-    averageNetworkHashrateHs: aggregate.networkCoverageSeconds ? aggregate.networkHashSeconds / aggregate.networkCoverageSeconds : 0,
-    averageNetworkDifficulty: aggregate.networkCoverageSeconds ? aggregate.networkDifficultySeconds / aggregate.networkCoverageSeconds : 0,
+    luckRatio:
+      aggregate.expected > 0 ? periodBlocks.length / aggregate.expected : null,
+    averageNetworkHashrateHs: aggregate.networkCoverageSeconds
+      ? aggregate.networkHashSeconds / aggregate.networkCoverageSeconds
+      : 0,
+    averageNetworkDifficulty: aggregate.networkCoverageSeconds
+      ? aggregate.networkDifficultySeconds / aggregate.networkCoverageSeconds
+      : 0,
     networkBlocksObserved: aggregate.networkBlocks,
     lastAcceptedShareAt: iso(aggregate.lastAcceptedShareAt),
     ...shareSummary(aggregate, coverageSeconds),
     workers: [...workers.values()].map((worker) => ({
       instance: worker.instance,
       worker: worker.worker,
-      averageHashrateHs: coverageSeconds ? worker.hashSeconds / coverageSeconds : 0,
-      availabilityRatio: coverageSeconds ? worker.onlineSeconds / coverageSeconds : null,
+      averageHashrateHs: coverageSeconds
+        ? worker.hashSeconds / coverageSeconds
+        : 0,
+      availabilityRatio: coverageSeconds
+        ? worker.onlineSeconds / coverageSeconds
+        : null,
       expectedBlocksObserved: worker.expected,
       lastSeenAt: iso(worker.lastSeenAt),
       lastAcceptedShareAt: iso(worker.lastAcceptedShareAt),
@@ -262,17 +452,33 @@ const chart = (samples, cutoff, bucketMs) => {
   for (const sample of samples) {
     if (sample.timestamp < cutoff) continue;
     const timestamp = Math.floor(sample.timestamp / bucketMs) * bucketMs;
-    const hashrateHs = sample.workers.reduce((sum, worker) => sum + worker.hashrateHs, 0);
+    const hashrateHs = sample.workers.reduce(
+      (sum, worker) => sum + worker.hashrateHs,
+      0,
+    );
     const target = buckets.get(timestamp) ?? { timestamp, total: 0, count: 0 };
     target.total += hashrateHs;
     target.count += 1;
     buckets.set(timestamp, target);
   }
-  return [...buckets.values()].sort((left, right) => left.timestamp - right.timestamp).map(({ timestamp, total, count }) => ({ timestamp, hashrateHs: count ? total / count : 0 }));
+  return [...buckets.values()]
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .map(({ timestamp, total, count }) => ({
+      timestamp,
+      hashrateHs: count ? total / count : 0,
+    }));
 };
 
 export class MiningHistoryStore {
-  constructor({ path, retentionMs = SEVEN_DAYS_MS, blockRetentionMs = BLOCK_HISTORY_MS, sampleIntervalMs = 60_000, flushIntervalMs = 300_000, now = () => Date.now(), onError = () => {} }) {
+  constructor({
+    path,
+    retentionMs = SEVEN_DAYS_MS,
+    blockRetentionMs = BLOCK_HISTORY_MS,
+    sampleIntervalMs = 60_000,
+    flushIntervalMs = 300_000,
+    now = () => Date.now(),
+    onError = () => {},
+  }) {
     this.path = path;
     this.retentionMs = retentionMs;
     this.blockRetentionMs = blockRetentionMs;
@@ -287,7 +493,11 @@ export class MiningHistoryStore {
     this.tail = Promise.resolve();
   }
 
-  queue(operation) { const result = this.tail.then(operation, operation); this.tail = result.catch(() => {}); return result; }
+  queue(operation) {
+    const result = this.tail.then(operation, operation);
+    this.tail = result.catch(() => {});
+    return result;
+  }
 
   async loadUnlocked() {
     if (this.loaded) return;
@@ -295,9 +505,12 @@ export class MiningHistoryStore {
       const stored = JSON.parse(await readFile(this.path, "utf8"));
       this.data = validStoredData(stored);
       if (stored.version !== 3) this.dirty = true;
-    }
-    catch (error) {
-      if (error.code !== "ENOENT") this.onError(`Mining history could not be read and was reset: ${error.message}`);
+      this.summaryCache = null;
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        this.onError(`Mining history unavailable: ${error.message}`);
+        throw error;
+      }
       this.data = emptyData();
     }
     this.loaded = true;
@@ -305,13 +518,22 @@ export class MiningHistoryStore {
   }
 
   pruneUnlocked(now) {
-    this.data.samples = this.data.samples.filter(({ timestamp }) => timestamp >= now - this.retentionMs && timestamp <= now + this.sampleIntervalMs);
-    this.data.blocks = this.data.blocks.filter(({ timestamp }) => timestamp >= now - this.blockRetentionMs && timestamp <= now + this.sampleIntervalMs);
+    this.data.samples = this.data.samples.filter(
+      ({ timestamp }) =>
+        timestamp >= now - this.retentionMs &&
+        timestamp <= now + this.sampleIntervalMs,
+    );
+    this.data.blocks = this.data.blocks.filter(
+      ({ timestamp }) =>
+        timestamp >= now - this.blockRetentionMs &&
+        timestamp <= now + this.sampleIntervalMs,
+    );
   }
 
   async flushUnlocked(force = false) {
     const now = this.now();
-    if (!this.dirty || (!force && now - this.lastFlush < this.flushIntervalMs)) return;
+    if (!this.dirty || (!force && now - this.lastFlush < this.flushIntervalMs))
+      return;
     await atomicWrite(this.path, `${JSON.stringify(this.data)}\n`);
     this.dirty = false;
     this.lastFlush = now;
@@ -322,20 +544,30 @@ export class MiningHistoryStore {
       await this.loadUnlocked();
       const sample = sanitizedSample(stats, timestamp);
       const latest = this.data.samples.at(-1);
-      if (latest && timestamp - latest.timestamp < this.sampleIntervalMs / 2) this.data.samples[this.data.samples.length - 1] = sample;
+      if (latest && timestamp - latest.timestamp < this.sampleIntervalMs / 2)
+        this.data.samples[this.data.samples.length - 1] = sample;
       else this.data.samples.push(sample);
       const known = new Set(this.data.blocks.map(({ hash }) => hash));
       let addedBlock = false;
       for (const source of Array.isArray(stats?.blocks) ? stats.blocks : []) {
-        const hash = text(source?.hash);
+        const hash = text(source?.hash).toLowerCase();
         const worker = workerName(source);
         if (!hash || !worker || known.has(hash)) continue;
-        this.data.blocks.push({ hash, instance: text(source.instance), worker, timestamp: eventTime(source.timestamp, timestamp), networkDifficulty: finite(stats?.networkDifficulty), networkBlockCount: finite(stats?.networkBlockCount), ...rewardDefaults() });
+        this.data.blocks.push({
+          hash,
+          instance: text(source.instance),
+          worker,
+          timestamp: eventTime(source.timestamp, timestamp),
+          networkDifficulty: finite(stats?.networkDifficulty),
+          networkBlockCount: finite(stats?.networkBlockCount),
+          ...rewardDefaults(),
+        });
         known.add(hash);
         addedBlock = true;
       }
       this.pruneUnlocked(timestamp);
       this.dirty = true;
+      this.summaryCache = null;
       await this.flushUnlocked(addedBlock);
     });
   }
@@ -345,52 +577,148 @@ export class MiningHistoryStore {
       await this.loadUnlocked();
       const now = this.now();
       this.pruneUnlocked(now);
-      const summaryWindow = Math.min(Math.max(windowMs, this.sampleIntervalMs), this.retentionMs);
+      if (
+        this.summaryCache?.windowMs === windowMs &&
+        now - this.summaryCache.at < this.sampleIntervalMs
+      )
+        return this.summaryCache.value;
+      const summaryWindow = Math.min(
+        Math.max(windowMs, this.sampleIntervalMs),
+        this.retentionMs,
+      );
       const cutoff = now - summaryWindow;
-      const periodsWithWorkers = Object.fromEntries(Object.entries(PERIODS).map(([name, duration]) => [name, periodSummary(this.data.samples, this.data.blocks, now - duration, duration, this.sampleIntervalMs)]));
-      const primary = periodSummary(this.data.samples, this.data.blocks, cutoff, summaryWindow, this.sampleIntervalMs);
-      const blocksInWindow = this.data.blocks.filter(({ timestamp }) => timestamp >= cutoff);
-      const samplesInWindow = this.data.samples.filter(({ timestamp }) => timestamp >= cutoff).sort((left, right) => left.timestamp - right.timestamp);
+      const periodsWithWorkers = Object.fromEntries(
+        Object.entries(PERIODS).map(([name, duration]) => [
+          name,
+          periodSummary(
+            this.data.samples,
+            this.data.blocks,
+            now - duration,
+            duration,
+            this.sampleIntervalMs,
+          ),
+        ]),
+      );
+      const primary = periodSummary(
+        this.data.samples,
+        this.data.blocks,
+        cutoff,
+        summaryWindow,
+        this.sampleIntervalMs,
+      );
+      const blocksInWindow = this.data.blocks.filter(
+        ({ timestamp }) => timestamp >= cutoff,
+      );
+      const samplesInWindow = this.data.samples
+        .filter(({ timestamp }) => timestamp >= cutoff)
+        .sort((left, right) => left.timestamp - right.timestamp);
       const workerIds = new Set([
-        ...Object.values(periodsWithWorkers).flatMap((period) => period.workers.map((worker) => workerKey(worker.instance, worker.worker))),
-        ...blocksInWindow.map((block) => workerKey(block.instance, block.worker)),
+        ...Object.values(periodsWithWorkers).flatMap((period) =>
+          period.workers.map((worker) =>
+            workerKey(worker.instance, worker.worker),
+          ),
+        ),
+        ...blocksInWindow.map((block) =>
+          workerKey(block.instance, block.worker),
+        ),
       ]);
-      const workerSummaries = [...workerIds].map((key) => {
-        const allWorkers = Object.values(periodsWithWorkers).flatMap((period) => period.workers);
-        const identity = allWorkers.find((worker) => workerKey(worker.instance, worker.worker) === key);
-        const periodMap = Object.fromEntries(Object.entries(periodsWithWorkers).map(([name, period]) => [name, period.workers.find((worker) => workerKey(worker.instance, worker.worker) === key) ?? null]));
-        const found = blocksInWindow.filter((block) => workerKey(block.instance, block.worker) === key);
-        const expected = primary.workers.find((worker) => workerKey(worker.instance, worker.worker) === key)?.expectedBlocksObserved ?? 0;
-        return {
-          instance: identity?.instance ?? found[0]?.instance ?? "",
-          worker: identity?.worker ?? found[0]?.worker ?? "",
-          averageHashrateHs: periodMap.sevenDays?.averageHashrateHs ?? 0,
-          blocksFound: found.length,
-          lastBlockAt: iso(Math.max(0, ...found.map(({ timestamp }) => timestamp))),
-          expectedBlocksObserved: expected,
-          periods: periodMap,
-          ...outlook(expected, primary.coverageSeconds, summaryWindow / 1000),
-        };
-      }).sort((left, right) => right.averageHashrateHs - left.averageHashrateHs || left.worker.localeCompare(right.worker));
-      const blockEvents = [...this.data.blocks].sort((left, right) => left.timestamp - right.timestamp);
-      const recentBlocks = blockEvents.slice(-20).reverse().map((block) => {
-        const position = blockEvents.indexOf(block);
-        const previous = position > 0 ? blockEvents[position - 1] : null;
-        const start = previous?.timestamp ?? samplesInWindow[0]?.timestamp ?? block.timestamp;
-        const effort = expectedBetween(this.data.samples, start, block.timestamp, this.sampleIntervalMs);
-        const completeRound = Boolean(previous && start >= (this.data.samples[0]?.timestamp ?? start));
-        return { hash: block.hash, instance: block.instance, worker: block.worker, timestamp: iso(block.timestamp), networkDifficulty: block.networkDifficulty, networkBlockCount: block.networkBlockCount, effortPercent: effort > 0 ? effort * 100 : null, completeRound, ...sanitizedReward(block) };
-      });
+      const workerSummaries = [...workerIds]
+        .map((key) => {
+          const allWorkers = Object.values(periodsWithWorkers).flatMap(
+            (period) => period.workers,
+          );
+          const identity = allWorkers.find(
+            (worker) => workerKey(worker.instance, worker.worker) === key,
+          );
+          const periodMap = Object.fromEntries(
+            Object.entries(periodsWithWorkers).map(([name, period]) => [
+              name,
+              period.workers.find(
+                (worker) => workerKey(worker.instance, worker.worker) === key,
+              ) ?? null,
+            ]),
+          );
+          const found = blocksInWindow.filter(
+            (block) => workerKey(block.instance, block.worker) === key,
+          );
+          const expected =
+            primary.workers.find(
+              (worker) => workerKey(worker.instance, worker.worker) === key,
+            )?.expectedBlocksObserved ?? 0;
+          return {
+            instance: identity?.instance ?? found[0]?.instance ?? "",
+            worker: identity?.worker ?? found[0]?.worker ?? "",
+            averageHashrateHs: periodMap.sevenDays?.averageHashrateHs ?? 0,
+            blocksFound: found.length,
+            lastBlockAt: iso(
+              Math.max(0, ...found.map(({ timestamp }) => timestamp)),
+            ),
+            expectedBlocksObserved: expected,
+            periods: periodMap,
+            ...outlook(expected, primary.coverageSeconds, summaryWindow / 1000),
+          };
+        })
+        .sort(
+          (left, right) =>
+            right.averageHashrateHs - left.averageHashrateHs ||
+            left.worker.localeCompare(right.worker),
+        );
+      const blockEvents = [...this.data.blocks].sort(
+        (left, right) => left.timestamp - right.timestamp,
+      );
+      const recentBlocks = blockEvents
+        .slice(-20)
+        .reverse()
+        .map((block) => {
+          const position = blockEvents.indexOf(block);
+          const previous = position > 0 ? blockEvents[position - 1] : null;
+          const start =
+            previous?.timestamp ??
+            samplesInWindow[0]?.timestamp ??
+            block.timestamp;
+          const effort = expectedBetween(
+            this.data.samples,
+            start,
+            block.timestamp,
+            this.sampleIntervalMs,
+          );
+          const completeRound = Boolean(
+            previous && start >= (this.data.samples[0]?.timestamp ?? start),
+          );
+          return {
+            hash: block.hash,
+            instance: block.instance,
+            worker: block.worker,
+            timestamp: iso(block.timestamp),
+            networkDifficulty: block.networkDifficulty,
+            networkBlockCount: block.networkBlockCount,
+            effortPercent: effort > 0 ? effort * 100 : null,
+            completeRound,
+            ...sanitizedReward(block),
+          };
+        });
       const lastBlock = blockEvents.at(-1);
-      const roundStart = lastBlock?.timestamp ?? samplesInWindow[0]?.timestamp ?? null;
-      const currentRoundExpected = roundStart ? expectedBetween(this.data.samples, roundStart, now, this.sampleIntervalMs) : 0;
-      const currentRoundComplete = Boolean(lastBlock && lastBlock.timestamp >= (this.data.samples[0]?.timestamp ?? lastBlock.timestamp));
+      const roundStart =
+        lastBlock?.timestamp ?? samplesInWindow[0]?.timestamp ?? null;
+      const currentRoundExpected = roundStart
+        ? expectedBetween(
+            this.data.samples,
+            roundStart,
+            now,
+            this.sampleIntervalMs,
+          )
+        : 0;
+      const currentRoundComplete = Boolean(
+        lastBlock &&
+        lastBlock.timestamp >=
+          (this.data.samples[0]?.timestamp ?? lastBlock.timestamp),
+      );
       const withoutWorkers = (period) => {
         const sanitized = { ...period };
         delete sanitized.workers;
         return sanitized;
       };
-      return {
+      const result = {
         windowDays: summaryWindow / (24 * 60 * 60 * 1000),
         sampleCount: primary.sampleCount,
         coverageSeconds: primary.coverageSeconds,
@@ -401,28 +729,127 @@ export class MiningHistoryStore {
         averageNetworkDifficulty: primary.averageNetworkDifficulty,
         networkBlocksObserved: primary.networkBlocksObserved,
         blocksFound: blocksInWindow.length,
-        lastBlockAt: iso(Math.max(0, ...blocksInWindow.map(({ timestamp }) => timestamp))),
+        lastBlockAt: iso(
+          Math.max(0, ...blocksInWindow.map(({ timestamp }) => timestamp)),
+        ),
         expectedBlocksObserved: primary.expectedBlocksObserved,
         luckRatio: primary.luckRatio,
-        currentRoundEffortPercent: currentRoundExpected > 0 ? currentRoundExpected * 100 : null,
+        currentRoundEffortPercent:
+          currentRoundExpected > 0 ? currentRoundExpected * 100 : null,
         currentRoundStartedAt: iso(roundStart),
         currentRoundComplete,
-        blockHistoryDays: this.blockRetentionMs / (24 * 60 * 60 * 1000),
-        periods: Object.fromEntries(Object.entries(periodsWithWorkers).map(([name, period]) => [name, withoutWorkers(period)])),
-        charts: Object.fromEntries(Object.entries(PERIODS).map(([name, duration]) => [name, chart(this.data.samples, now - duration, CHART_BUCKETS[name])])),
+        blockHistoryDays:
+          this.blockRetentionMs === BLOCK_HISTORY_MS
+            ? null
+            : this.blockRetentionMs / (24 * 60 * 60 * 1000),
+        periods: Object.fromEntries(
+          Object.entries(periodsWithWorkers).map(([name, period]) => [
+            name,
+            withoutWorkers(period),
+          ]),
+        ),
+        charts: Object.fromEntries(
+          Object.entries(PERIODS).map(([name, duration]) => [
+            name,
+            chart(this.data.samples, now - duration, CHART_BUCKETS[name]),
+          ]),
+        ),
         recentBlocks,
-        ...outlook(primary.expectedBlocksObserved, primary.coverageSeconds, summaryWindow / 1000),
+        ...outlook(
+          primary.expectedBlocksObserved,
+          primary.coverageSeconds,
+          summaryWindow / 1000,
+        ),
         workers: workerSummaries,
       };
+      this.summaryCache = { windowMs, at: now, value: result };
+      return result;
     });
   }
 
   reset() {
     return this.queue(async () => {
       await this.loadUnlocked();
-      this.data = emptyData();
+      this.data.samples = [];
       this.dirty = true;
+      this.summaryCache = null;
       await this.flushUnlocked(true);
+    });
+  }
+
+  exportData() {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      return structuredClone(this.data);
+    });
+  }
+
+  ledger({
+    limit = 50,
+    cursor = "",
+    status = "",
+    worker = "",
+    windowMs = BLOCK_HISTORY_MS,
+  } = {}) {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      const safeLimit = Math.min(100, Math.max(1, Number(limit) || 50));
+      let anchor = null;
+      if (cursor) {
+        try {
+          anchor = JSON.parse(Buffer.from(cursor, "base64url").toString());
+        } catch {
+          throw Object.assign(new Error("Invalid ledger cursor"), {
+            statusCode: 400,
+          });
+        }
+        if (
+          !Array.isArray(anchor) ||
+          anchor.length !== 2 ||
+          !Number.isFinite(anchor[0]) ||
+          typeof anchor[1] !== "string"
+        )
+          throw Object.assign(new Error("Invalid ledger cursor"), {
+            statusCode: 400,
+          });
+      }
+      const cutoff = this.now() - windowMs;
+      const rows = this.data.blocks
+        .filter(
+          (b) =>
+            b.timestamp >= cutoff &&
+            (!status || (status === "pending" ? ["unknown", "unresolved"].includes(b.rewardStatus) : b.rewardStatus === status)) &&
+            (!worker || b.worker.toLowerCase().includes(worker.toLowerCase())),
+        )
+        .sort(
+          (a, b) => b.timestamp - a.timestamp || a.hash.localeCompare(b.hash),
+        );
+      const remaining = anchor
+        ? rows.filter(
+            (b) =>
+              b.timestamp < anchor[0] ||
+              (b.timestamp === anchor[0] &&
+                b.hash.localeCompare(anchor[1]) > 0),
+          )
+        : rows;
+      const page = remaining.slice(0, safeLimit);
+      const last = page.at(-1);
+      return {
+        total: rows.length,
+        blocks: page.map((b) => ({
+          hash: b.hash,
+          instance: b.instance,
+          worker: b.worker,
+          timestamp: iso(b.timestamp),
+          ...sanitizedReward(b),
+        })),
+        nextCursor:
+          remaining.length > safeLimit
+            ? Buffer.from(JSON.stringify([last.timestamp, last.hash])).toString(
+                "base64url",
+              )
+            : null,
+      };
     });
   }
 
@@ -430,13 +857,16 @@ export class MiningHistoryStore {
     return this.queue(async () => {
       await this.loadUnlocked();
       const safeLimit = Math.min(1_000, Math.max(1, Number(limit) || 100));
-      return [...this.data.blocks].sort((left, right) => right.timestamp - left.timestamp).slice(0, safeLimit).map((block) => ({
-        hash: block.hash,
-        instance: block.instance,
-        worker: block.worker,
-        timestamp: iso(block.timestamp),
-        ...sanitizedReward(block),
-      }));
+      return [...this.data.blocks]
+        .sort((left, right) => right.timestamp - left.timestamp)
+        .slice(0, safeLimit)
+        .map((block) => ({
+          hash: block.hash,
+          instance: block.instance,
+          worker: block.worker,
+          timestamp: iso(block.timestamp),
+          ...sanitizedReward(block),
+        }));
     });
   }
 
@@ -444,7 +874,20 @@ export class MiningHistoryStore {
     return this.queue(async () => {
       await this.loadUnlocked();
       const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20));
-      return this.data.blocks.filter(({ rewardStatus }) => ["unresolved", "unknown", "error"].includes(rewardStatus)).sort((left, right) => left.timestamp - right.timestamp).slice(0, safeLimit).map((block) => ({ hash: block.hash, rewardStatus: block.rewardStatus, rewardLastCheckedAt: block.rewardLastCheckedAt }));
+      return this.data.blocks
+        .filter((block) => (block.rewardNextCheckAt ?? 0) <= this.now())
+        .sort(
+          (left, right) =>
+            (left.rewardLastCheckedAt ?? 0) -
+              (right.rewardLastCheckedAt ?? 0) ||
+            left.timestamp - right.timestamp,
+        )
+        .slice(0, safeLimit)
+        .map((block) => ({
+          hash: block.hash,
+          rewardStatus: block.rewardStatus,
+          rewardLastCheckedAt: block.rewardLastCheckedAt,
+        }));
     });
   }
 
@@ -452,10 +895,37 @@ export class MiningHistoryStore {
     return this.queue(async () => {
       await this.loadUnlocked();
       const hash = text(value).toLowerCase();
-      const block = this.data.blocks.find((candidate) => candidate.hash.toLowerCase() === hash);
+      const block = this.data.blocks.find(
+        (candidate) => candidate.hash.toLowerCase() === hash,
+      );
       if (!block) return false;
-      Object.assign(block, sanitizedReward({ ...block, ...patch }));
+      const status = patch.rewardStatus ?? block.rewardStatus;
+      if (["blue", "red"].includes(block.rewardStatus))
+        block.lastSuccessfulReward = {
+          rewardStatus: block.rewardStatus,
+          totalRewardSompi: block.totalRewardSompi,
+          checkedAt: block.rewardLastCheckedAt,
+        };
+      const attempts = ["error", "unknown", "unresolved"].includes(status)
+        ? (block.rewardAttempts ?? 0) + 1
+        : 0;
+      const delay = attempts
+        ? Math.min(3_600_000, 30_000 * 2 ** Math.min(attempts - 1, 7))
+        : 300_000;
+      Object.assign(
+        block,
+        sanitizedReward({
+          ...block,
+          ...patch,
+          rewardProofVersion: patch.rewardDecompositionVerified
+            ? 1
+            : block.rewardProofVersion,
+          rewardAttempts: attempts,
+          rewardNextCheckAt: this.now() + delay,
+        }),
+      );
       this.dirty = true;
+      this.summaryCache = null;
       await this.flushUnlocked(true);
       return true;
     });
@@ -465,32 +935,72 @@ export class MiningHistoryStore {
     return this.queue(async () => {
       await this.loadUnlocked();
       const now = this.now();
-      const duration = Math.min(Math.max(Number(windowMs) || SEVEN_DAYS_MS, 60_000), this.blockRetentionMs);
-      const blocks = this.data.blocks.filter(({ timestamp }) => timestamp >= now - duration);
+      const duration = Math.min(
+        Math.max(Number(windowMs) || SEVEN_DAYS_MS, 60_000),
+        this.blockRetentionMs,
+      );
+      const blocks = this.data.blocks.filter(
+        ({ timestamp }) => timestamp >= now - duration,
+      );
       const totals = { subsidy: 0n, fees: 0n, dag: 0n, realised: 0n };
-      let blue = 0; let red = 0; let pending = 0; let errors = 0; let decomposed = 0;
+      let blue = 0;
+      let red = 0;
+      let pending = 0;
+      let errors = 0;
+      let decomposed = 0;
+      const earliest = blocks.reduce(
+        (min, block) => Math.min(min, block.timestamp),
+        now,
+      );
+      const bucketMs = Math.max(
+        60_000,
+        Math.ceil(Math.min(duration, now - earliest || 60_000) / 120 / 60_000) *
+          60_000,
+      );
       const buckets = new Map();
       for (const block of blocks) {
         if (block.rewardStatus === "blue") blue += 1;
         else if (block.rewardStatus === "red") red += 1;
         else if (block.rewardStatus === "error") errors += 1;
         else pending += 1;
-        const total = sompi(block.totalRewardSompi);
+        const total =
+          block.rewardStatus === "blue" && block.blockColor === "blue"
+            ? sompi(block.totalRewardSompi)
+            : null;
         if (total !== null) totals.realised += BigInt(total);
-        if (block.rewardDecompositionVerified) {
+        if (
+          total !== null &&
+          block.rewardDecompositionVerified &&
+          [
+            block.subsidySompi,
+            block.acceptedTxFeesSompi,
+            block.dagMergeRewardSompi,
+          ].every((value) => sompi(value) !== null) &&
+          BigInt(block.subsidySompi) +
+            BigInt(block.acceptedTxFeesSompi) +
+            BigInt(block.dagMergeRewardSompi) ===
+            BigInt(total)
+        ) {
           decomposed += 1;
           totals.subsidy += BigInt(sompi(block.subsidySompi) ?? "0");
           totals.fees += BigInt(sompi(block.acceptedTxFeesSompi) ?? "0");
           totals.dag += BigInt(sompi(block.dagMergeRewardSompi) ?? "0");
         }
-        const bucketTimestamp = Math.floor(block.timestamp / 86_400_000) * 86_400_000;
-        const bucket = buckets.get(bucketTimestamp) ?? { timestamp: iso(bucketTimestamp), blocks: 0, totalRewardSompi: 0n };
+        const bucketTimestamp =
+          Math.floor(block.timestamp / bucketMs) * bucketMs;
+        const bucket = buckets.get(bucketTimestamp) ?? {
+          timestamp: iso(bucketTimestamp),
+          blocks: 0,
+          totalRewardSompi: 0n,
+        };
         bucket.blocks += 1;
         if (total !== null) bucket.totalRewardSompi += BigInt(total);
         buckets.set(bucketTimestamp, bucket);
       }
       return {
-        periodSeconds: duration / 1000,
+        periodSeconds:
+          (duration === BLOCK_HISTORY_MS ? now - earliest : duration) / 1000,
+        asOf: iso(now),
         blocksFound: blocks.length,
         blueBlocks: blue,
         redBlocks: red,
@@ -501,11 +1011,24 @@ export class MiningHistoryStore {
         dagMergeRewardSompi: totals.dag.toString(),
         totalRewardSompi: totals.realised.toString(),
         decompositionCoverage: blue > 0 ? decomposed / blue : null,
-        feeShare: totals.realised > 0n ? Number(totals.fees * 1_000_000n / totals.realised) / 1_000_000 : null,
-        daily: [...buckets.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp)).map((bucket) => ({ ...bucket, totalRewardSompi: bucket.totalRewardSompi.toString() })),
+        feeShare:
+          totals.realised > 0n
+            ? Number((totals.fees * 1_000_000n) / totals.realised) / 1_000_000
+            : null,
+        daily: [...buckets.values()]
+          .sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+          .map((bucket) => ({
+            ...bucket,
+            totalRewardSompi: bucket.totalRewardSompi.toString(),
+          })),
       };
     });
   }
 
-  close() { return this.queue(async () => { await this.loadUnlocked(); await this.flushUnlocked(true); }); }
+  close() {
+    return this.queue(async () => {
+      await this.loadUnlocked();
+      await this.flushUnlocked(true);
+    });
+  }
 }
