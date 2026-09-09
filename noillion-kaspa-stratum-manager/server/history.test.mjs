@@ -296,4 +296,3 @@ test("persists exact reward strings and aggregates realised revenue without prec
   assert.equal(block.confirmationCount, "42");
   assert.equal(block.totalRewardSompi, "18446744073709551615");
 });
-
