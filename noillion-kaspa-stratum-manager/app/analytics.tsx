@@ -492,4 +492,3 @@ export default function Analytics({
     </section>
   );
 }
-
